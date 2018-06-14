@@ -1,0 +1,13 @@
+## .gitignore
+
+# Python cache files and directories
+*.pyc
+__pycache__
+*.egg-info/
+
+# Ignore sentinel logs
+*.log
+*.log.*
+
+# Pytest
+.pytest_cache/
