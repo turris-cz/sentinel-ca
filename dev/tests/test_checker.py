@@ -1,6 +1,7 @@
 import pytest
 
 import hashlib
+import secrets
 
 import checker
 
@@ -8,7 +9,10 @@ import checker
 MESSAGE_TYPE = "sentinel/certificator/checker"
 
 
-def msg_payload(sn, nonce, good_digest=True):
+def msg_payload(sn, nonce=None, good_digest=True):
+    if not nonce:
+        nonce = secrets.token_hex(16)
+
     if good_digest:
         to_hash = "{}:{}".format(sn, nonce)
         hash_digest = hashlib.sha256(bytes(to_hash, encoding='utf-8'))
@@ -27,21 +31,21 @@ def msg_payload(sn, nonce, good_digest=True):
 
 
 def test_normal_processing():
-    reply = checker.process(MESSAGE_TYPE, msg_payload("foo", 65487654))
+    reply = checker.process(MESSAGE_TYPE, msg_payload("foo"))
 
     assert reply["status"] == "ok"
     assert reply["message"] == ""
 
 
 def test_bad_msg_type():
-    reply = checker.process("sentinel/ca",  msg_payload("foo", 65487654))
+    reply = checker.process("sentinel/ca",  msg_payload("foo"))
 
     assert reply["status"] == "failed"
     assert "Unknown message type" in reply["message"]
 
 
 def test_missing_msg_part():
-    p = msg_payload("foo", 65487654)
+    p = msg_payload("foo")
     del p["sn"]
 
     reply = checker.process(MESSAGE_TYPE, p)
@@ -51,7 +55,7 @@ def test_missing_msg_part():
 
 
 def test_bad_digest():
-    reply = checker.process(MESSAGE_TYPE, msg_payload("foo", 65487654, good_digest=False))
+    reply = checker.process(MESSAGE_TYPE, msg_payload("foo", good_digest=False))
     print(reply)
 
     assert reply["status"] == "failed"
