@@ -47,6 +47,15 @@ def build_reply(status, message=""):
     }
 
 
+def process(msg_type, message):
+    try:
+        check_message(msg_type, message)
+        process_message(message["sn"], message["nonce"], message["digest"])
+        return build_reply("ok")
+    except CheckerError as e:
+        return build_reply("failed", str(e))
+
+
 def main():
     ctx = sn.SN(zmq.Context.instance())
     socket = ctx.get_socket(("in", "REP"))
@@ -56,12 +65,7 @@ def main():
         zmq_msg = socket.recv_multipart()
         msg_type, message = sn.parse_msg(zmq_msg)
 
-        try:
-            check_message(msg_type, message)
-            process_message(message["sn"], message["nonce"], message["digest"])
-            reply = build_reply("ok")
-        except CheckerError as e:
-            zmq_reply = build_reply("failed", str(e))
+        reply = process(msg_type, message)
 
         socket.send_multipart(sn.encode_msg(MESSAGE_TYPE, reply))
 
