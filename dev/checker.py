@@ -67,7 +67,7 @@ def main():
 
         reply = process(msg_type, message)
 
-        socket.send_multipart(sn.encode_msg(MESSAGE_TYPE, reply))
+        socket.send_multipart(sn.encode_msg(msg_type, reply))
 
 
 if __name__ == "__main__":
