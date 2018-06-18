@@ -28,6 +28,15 @@ class CheckerError(Exception):
     pass
 
 
+def get_argparser(parser):
+    parser.add_argument(
+            "-l", "--log-messages",
+            action='store_true',
+            help="Log incoming/outgoing messages"
+    )
+    return parser
+
+
 def log_message(msg_type, message, direction="none", extra_line=False):
     symbol = LOG_MESSAGE_MAPPER[direction]
     print("{} {}: {}".format(symbol, msg_type, message))
@@ -70,18 +79,20 @@ def process(msg_type, message):
 
 
 def main():
-    ctx = sn.SN(zmq.Context.instance())
+    ctx = sn.SN(zmq.Context.instance(), get_argparser(sn.get_arg_parser()))
     socket = ctx.get_socket(("in", "REP"))
 
     # Receive the message, compare digest and reply with status (and error message)
     while True:
         zmq_msg = socket.recv_multipart()
         msg_type, message = sn.parse_msg(zmq_msg)
-        log_message(msg_type, message, direction="incoming")
+        if ctx.args.log_messages:
+            log_message(msg_type, message, direction="incoming")
 
         reply = process(msg_type, message)
 
-        log_message(msg_type, reply, direction="outgoing", extra_line=True)
+        if ctx.args.log_messages:
+            log_message(msg_type, reply, direction="outgoing", extra_line=True)
         socket.send_multipart(sn.encode_msg(msg_type, reply))
 
 
