@@ -13,10 +13,26 @@ import time
 
 import redis
 
+# backend
+from cryptography.hazmat.backends import default_backend
+# serialization
+from cryptography.hazmat.primitives import serialization
+# private/public keys
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
+# request
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes
+
+
 CONFIG_DEFAULT_PATH = "cert-api.ini"
 
 SLEEP_MIN = 7
 SLEEP_MAX = 42
+
+RSA_BITS = 4096
+RSA_EXPONENT = 0x10001 # 65537
+ECDSA_CURVE = ec.SECP256R1()
 
 AUTH_TYPE = "atsha"
 QUEUE_NAME = "csr"
@@ -26,6 +42,10 @@ LOG_MESSAGE_MAPPER = {
     "outgoing": "→",
     "none": " ",
 }
+
+
+class CertApiError(Exception):
+    pass
 
 
 def get_arg_parser():
@@ -101,6 +121,38 @@ def print_redis_list(r):
     print("")
 
 
+def gen_key(key_type="ecdsa", curve=ECDSA_CURVE, rsa_bits=RSA_BITS, rsa_exponent=RSA_EXPONENT):
+    if key_type == "ecdsa":
+        private_key = ec.generate_private_key(
+                curve=curve,
+                backend=default_backend()
+        )
+    elif key_type == "rsa":
+        private_key = rsa.generate_private_key(
+                public_exponent=RSA_EXPONENT,
+                key_size=RSA_BITS,
+                backend=default_backend()
+        )
+    else:
+        raise CertApiError("Unsupported key type: {}".key_type)
+
+    return private_key
+
+
+def gen_csr(sn):
+    # 1 of 4 keys would be a RSA
+    key_type = random.choice(("ecdsa", "ecdsa", "ecdsa", "rsa"))
+    private_key = gen_key(key_type)
+
+    subject = x509.Name([
+            x509.NameAttribute(NameOID.COMMON_NAME, sn),
+    ])
+    csr = x509.CertificateSigningRequestBuilder(subject_name=subject)
+    csr = csr.sign(private_key, hashes.SHA256(), default_backend())
+
+    return csr.public_bytes(serialization.Encoding.PEM)
+
+
 def build_request():
     sn = secrets.token_hex(8)
     sid = secrets.token_hex(16)
@@ -113,12 +165,15 @@ def build_request():
         hash_digest = hashlib.sha1(bytes(to_hash, encoding='utf-8'))
     digest = hash_digest.hexdigest()
 
+    csr = str(gen_csr(sn), encoding='utf-8')
+
     request = {
             "sn": sn,
             "sid": sid,
             "auth_type": AUTH_TYPE,
             "nonce": nonce,
             "digest": digest,
+            "csr_str": csr,
     }
 
     return request
