@@ -17,9 +17,22 @@ REQUIRED_KEYS = [
     "digest",
 ]
 
+LOG_MESSAGE_MAPPER = {
+    "incoming": "←",
+    "outgoing": "→",
+    "none": " ",
+}
+
 
 class CheckerError(Exception):
     pass
+
+
+def log_message(msg_type, message, direction="none", extra_line=False):
+    symbol = LOG_MESSAGE_MAPPER[direction]
+    print("{} {}: {}".format(symbol, msg_type, message))
+    if extra_line:
+        print("")
 
 
 def check_message(msg_type, message):
@@ -64,9 +77,11 @@ def main():
     while True:
         zmq_msg = socket.recv_multipart()
         msg_type, message = sn.parse_msg(zmq_msg)
+        log_message(msg_type, message, direction="incoming")
 
         reply = process(msg_type, message)
 
+        log_message(msg_type, reply, direction="outgoing", extra_line=True)
         socket.send_multipart(sn.encode_msg(msg_type, reply))
 
 
