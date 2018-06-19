@@ -29,6 +29,13 @@ REQUIRED_REQUEST_KEYS = [
 ]
 
 MESSAGE_TYPE = "sentinel/certificator/checker"
+AUTH_REQUEST_KEYS = [
+    "sn",
+    "auth_type",
+    "nonce",
+    "digest",
+]
+
 REQUIRED_AUTH_REPLY_KEYS = [
     "status",
     "message",
@@ -150,13 +157,9 @@ def check_auth_reply(msg_type, message):
             raise CAError("'{}' is missing in the auth reply".format(key))
 
 
+"""checker via zmq"""
 def check_auth(socket, request, log_messages):
-    auth_request = {
-            "sn": request["sn"],
-            "auth_type": request["auth_type"],
-            "nonce": request["nonce"],
-            "digest": request["digest"],
-    }
+    auth_request = {key:request[key] for key in AUTH_REQUEST_KEYS}
     socket.send_multipart(sn.encode_msg(MESSAGE_TYPE, auth_request))
     if log_messages:
         log_message(MESSAGE_TYPE, auth_request, direction="out")
