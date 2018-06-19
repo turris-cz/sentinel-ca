@@ -150,12 +150,12 @@ def check_auth_reply(msg_type, message):
             raise CAError("'{}' is missing in the auth reply".format(key))
 
 
-def check_auth(socket, dev_sn, auth_type, nonce, digest):
+def check_auth(socket, request):
     auth_request = {
-            "sn": dev_sn,
-            "auth_type": auth_type,
-            "nonce": nonce,
-            "digest": digest,
+            "sn": request["sn"],
+            "auth_type": request["auth_type"],
+            "nonce": request["nonce"],
+            "digest": request["digest"],
     }
     socket.send_multipart(sn.encode_msg(MESSAGE_TYPE, auth_request))
     zmq_reply = socket.recv_multipart()
@@ -168,7 +168,7 @@ def check_auth(socket, dev_sn, auth_type, nonce, digest):
 def process_request(socket, request):
     try:
         check_request(request)
-        check_auth(socket, request["sn"], request["auth_type"], request["nonce"], request["digest"])
+        check_auth(socket, request)
         return build_reply(request["sn"])
     except CAError as e:
         return build_reply("", str(e))
