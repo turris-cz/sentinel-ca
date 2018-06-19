@@ -150,7 +150,7 @@ def check_auth_reply(msg_type, message):
             raise CAError("'{}' is missing in the auth reply".format(key))
 
 
-def check_auth(socket, request):
+def check_auth(socket, request, log_messages):
     auth_request = {
             "sn": request["sn"],
             "auth_type": request["auth_type"],
@@ -158,17 +158,23 @@ def check_auth(socket, request):
             "digest": request["digest"],
     }
     socket.send_multipart(sn.encode_msg(MESSAGE_TYPE, auth_request))
+    if log_messages:
+        log_message(MESSAGE_TYPE, auth_request, direction="out")
+
     zmq_reply = socket.recv_multipart()
     msg_type, auth_reply = sn.parse_msg(zmq_reply)
+    if log_messages:
+        log_message(msg_type, auth_reply, direction="in")
+
     check_auth_reply(msg_type, auth_reply)
     if auth_reply["status"] != "ok":
         raise CAError(auth_reply["message"])
 
 
-def process_request(socket, request):
+def process_request(socket, request, log_messages):
     try:
         check_request(request)
-        check_auth(socket, request)
+        check_auth(socket, request, log_messages)
         return build_reply(request["sn"])
     except CAError as e:
         return build_reply("", str(e))
@@ -192,7 +198,7 @@ def main():
         if ctx.args.log_messages:
             log_message(QUEUE_NAME, request, direction="in")
 
-        reply = process_request(socket, request)
+        reply = process_request(socket, request, ctx.args.log_messages)
 
         redis_key = redis_cert_key(request)
         if ctx.args.log_messages:
