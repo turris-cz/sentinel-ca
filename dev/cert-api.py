@@ -36,6 +36,7 @@ ECDSA_CURVE = ec.SECP256R1()
 
 AUTH_TYPE = "atsha"
 QUEUE_NAME = "csr"
+CERT_KEYSPACE = "certificate"
 
 LOG_MESSAGE_MAPPER = {
     "incoming": "←",
@@ -121,6 +122,16 @@ def print_redis_list(r):
     print("")
 
 
+def print_redis_certs(r):
+    i = 0
+    for key in r.scan_iter(match="{}:*".format(CERT_KEYSPACE)):
+        ttl = r.ttl(key)
+        print("{:3d}: {}".format(ttl, str(key, encoding='utf-8')))
+        i += 1
+    print("# of certificates: {}".format(i))
+    print("")
+
+
 def gen_key(key_type="ecdsa", curve=ECDSA_CURVE, rsa_bits=RSA_BITS, rsa_exponent=RSA_EXPONENT):
     if key_type == "ecdsa":
         private_key = ec.generate_private_key(
@@ -193,7 +204,10 @@ def main():
         r.lpush(QUEUE_NAME, json.dumps(request))
 
         if args.log_messages:
+            time.sleep(1)
             print_redis_list(r)
+            time.sleep(1)
+            print_redis_certs(r)
 
         time.sleep(random.randint(SLEEP_MIN, SLEEP_MAX))
 
