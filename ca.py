@@ -3,6 +3,8 @@
 #
 # Sentinel:CA: a certificator component
 
+import sys
+import datetime
 import hashlib
 import configparser
 import json
@@ -10,6 +12,14 @@ import json
 import redis
 import zmq
 import sn
+
+# backend
+from cryptography.hazmat.backends import default_backend
+# serialization
+from cryptography.hazmat.primitives import serialization
+# signing certs
+from cryptography import x509
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
 
 CONFIG_DEFAULT_PATH = "ca.ini"
@@ -61,6 +71,23 @@ def log_message(msg_type, message, direction="none", extra_line=False):
 
 def get_argparser(parser):
     parser.add_argument(
+            "-C", "--ca-cert",
+            required=True,
+            metavar="CERT",
+            help="Certificate of the CA"
+    )
+    parser.add_argument(
+            "-K", "--ca-key",
+            required=True,
+            metavar="KEY",
+            help="Private key of the CA"
+    )
+    parser.add_argument(
+            "-F", "--ca-ignore-errors",
+            action='store_true',
+            help="Ignore cert and/or key checks errors"
+    )
+    parser.add_argument(
             "-c", "--config",
             required=True,
             default=CONFIG_DEFAULT_PATH,
@@ -94,6 +121,76 @@ def config(config_path):
         raise FileNotFoundError()
 
     return conf
+
+
+def check_cert_private_key_match(cert, key):
+    cert_key = cert.public_key()
+    public_key = key.public_key()
+
+    if public_key.public_numbers() != cert_key.public_numbers():
+        raise CAError("Private key does not match with certificate public key")
+
+def check_cert_valid_dates(cert):
+    now = datetime.datetime.utcnow()
+    if now < cert.not_valid_before:
+        raise CAError("Certificate is not valid yet")
+
+    if cert.not_valid_after < now:
+        raise CAError("Certificate is expired")
+
+def check_cert_basic_constraints(cert):
+    try:
+        ext = cert.extensions.get_extension_for_class(x509.BasicConstraints)
+    except x509.ExtensionNotFound:
+        raise CAError("Certificate does not have Basic Constraints extension")
+
+    if not ext.value.ca:
+        raise CAError("Certificate is not a CA cert")
+
+def check_cert_key_usage(cert):
+    try:
+        ext = cert.extensions.get_extension_for_class(x509.KeyUsage)
+    except x509.ExtensionNotFound:
+        raise CAError("Certificate does not have Key Usage extension")
+
+    if not ext.value.key_cert_sign:
+        raise CAError("CA key usage does not allow cert signing")
+
+def check_cert_subject_key_identifier(cert):
+    try:
+        ext = cert.extensions.get_extension_for_class(x509.SubjectKeyIdentifier)
+    except x509.ExtensionNotFound:
+        raise CAError("Certificate does not have Subject Key Identifier extension")
+
+def check_cert(cert, key, ignore_errors):
+    try:
+        check_cert_private_key_match(cert, key)
+        check_cert_basic_constraints(cert)
+        check_cert_key_usage(cert)
+        check_cert_subject_key_identifier(cert)
+        check_cert_valid_dates(cert)
+
+    except CAError as e:
+        print(str(e), file=sys.stderr)
+        if not ignore_errors:
+            sys.exit(2)
+
+
+def init_ca(cert_path, key_path, key_password=None, ignore_errors=False):
+    with open(cert_path, 'rb') as f:
+        cert = x509.load_pem_x509_certificate(
+                data=f.read(),
+                backend=default_backend()
+        )
+    with open(key_path, 'rb') as f:
+        key = serialization.load_pem_private_key(
+                data=f.read(),
+                password=key_password,
+                backend=default_backend()
+        )
+    check_cert(cert, key, ignore_errors)
+
+    return cert, key
 
 
 def init_redis(conf):
@@ -192,6 +289,12 @@ def get_request(r, queue, timeout=0):
 def main():
     ctx = sn.SN(zmq.Context.instance(), get_argparser(sn.get_arg_parser()))
     socket = ctx.get_socket(("checker", "REQ"))
+
+    ca_cert, ca_key = init_ca(
+            ctx.args.ca_cert,
+            ctx.args.ca_key,
+            ignore_errors=ctx.args.ca_ignore_errors
+    )
 
     conf = config(ctx.args.config)
     r = init_redis(conf)
