@@ -362,7 +362,20 @@ def init_db(conf):
 
 
 def get_unique_serial_number(db):
-    return x509.random_serial_number()
+    for i in range(256):
+        serial_number = x509.random_serial_number()
+
+        c = db.cursor()
+        c.execute('SELECT * FROM certs WHERE sn=?', (str(serial_number),))
+        if c.fetchone():
+            c.close()
+            continue
+
+        # if there is no cert with this S/N
+        c.close()
+        return serial_number
+
+    raise CAError("Could not get unique certificate s/n")
 
 
 def store_cert(db, serial_number, identity, not_before, not_after, cert_bytes):
