@@ -9,6 +9,7 @@ import configparser
 import json
 
 import redis
+import sqlite3
 import zmq
 import sn
 
@@ -120,6 +121,9 @@ def prepare_config():
     conf.set("redis", "host", "127.0.0.1")
     conf.set("redis", "port", "6379")
     conf.set("redis", "password", "")
+
+    conf.add_section("db")
+    conf.set("db", "path", "ca.db")
 
     return conf
 
@@ -239,13 +243,7 @@ def build_aki(cert):
 
     return aki
 
-def build_client_cert(csr, subject, issuer, aki, serial_number=None, days=CERT_DAYS):
-    # generate missing and optional parameters -------
-    not_before = datetime.datetime.utcnow()
-    not_after = datetime.datetime.utcnow() + datetime.timedelta(days=days)
-    if not serial_number:
-        serial_number = x509.random_serial_number()
-
+def build_client_cert(csr, serial_number, subject, issuer, aki, not_before, not_after):
     # Generate v1 cert (without extensions) ----------
     cert = x509.CertificateBuilder(
             issuer_name=issuer,
@@ -301,27 +299,31 @@ def build_client_cert(csr, subject, issuer, aki, serial_number=None, days=CERT_D
     return cert
 
 
-def sign_csr(ca_key, ca_cert, csr, identity):
+def issue_cert(db, ca_key, ca_cert, request):
+    csr = load_csr(request["csr_str"])
+    identity = request["sn"]
+
+    check_csr(csr, identity)
+
+    serial_number = get_unique_serial_number(db)
+    not_before = datetime.datetime.utcnow()
+    not_after = datetime.datetime.utcnow() + datetime.timedelta(days=CERT_DAYS)
+
     cert = build_client_cert(
             csr=csr,
+            serial_number=serial_number,
             subject=build_subject(identity),
             issuer=ca_cert.subject,
             aki=build_aki(ca_cert),
+            not_before=not_before,
+            not_after=not_after,
     )
-
     cert = cert.sign(ca_key, SIGNING_HASH, default_backend())
 
-    return cert
+    cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
+    store_cert(db, serial_number, identity, not_before, not_after, cert_bytes)
 
-
-def issue_cert(ca_key, ca_cert, request):
-    device_id = request["sn"]
-    csr = load_csr(request["csr_str"])
-
-    check_csr(csr, device_id)
-    cert = sign_csr(ca_key, ca_cert, csr, device_id)
-
-    return cert.public_bytes(serialization.Encoding.PEM)
+    return cert_bytes
 
 
 def init_ca(cert_path, key_path, key_password=None, ignore_errors=False):
@@ -339,6 +341,40 @@ def init_ca(cert_path, key_path, key_password=None, ignore_errors=False):
     check_cert(cert, key, ignore_errors)
 
     return cert, key
+
+
+def init_db(conf):
+    conn = sqlite3.connect(conf.get("db", "path"))
+
+    try:
+        # test table and columns existence
+        c = conn.cursor()
+        c.execute("""
+            SELECT sn, common_name, not_before, not_after, cert
+              FROM certs
+              LIMIT 1
+        """)
+        c.close()
+    except sqlite3.OperationalError as e:
+        raise CAError(str(e))
+
+    return conn
+
+
+def get_unique_serial_number(db):
+    return x509.random_serial_number()
+
+
+def store_cert(db, serial_number, identity, not_before, not_after, cert_bytes):
+    c = db.cursor()
+    c.execute("""
+            INSERT INTO certs(sn, common_name, not_before, not_after, cert)
+            VALUES (?,?,?,?,?)
+            """,
+            (str(serial_number), identity, not_before, not_after, cert_bytes)
+    )
+    c.close()
+    db.commit()
 
 
 def init_redis(conf):
@@ -424,6 +460,7 @@ def main():
 
     conf = config(ctx.args.config)
     r = init_redis(conf)
+    db = init_db(conf)
 
     while True:
         request = get_request(r, queue=QUEUE_NAME)
@@ -433,7 +470,7 @@ def main():
         try:
             check_request(request)
             check_auth(socket, request, ctx.args.log_messages)
-            cert = issue_cert(ca_key, ca_cert, request)
+            cert = issue_cert(db, ca_key, ca_cert, request)
             reply = build_reply(cert_bytes=cert)
         except CAError as e:
             reply = build_reply(message=str(e))
