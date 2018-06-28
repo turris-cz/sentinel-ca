@@ -214,26 +214,16 @@ def redis_cert_key(request):
     return "{}:{}:{}".format(CERT_KEYSPACE, request["sn"], request["sid"])
 
 
-def issue_cert(sn):
-    hash_digest = hashlib.sha256(bytes(sn, encoding='utf-8'))
+def issue_cert(request):
+    hash_digest = hashlib.sha256(bytes(request["sn"], encoding='utf-8'))
     return hash_digest.hexdigest()
 
 
-def build_reply(sn, message=""):
-    if sn:
-        cert = issue_cert(sn)
-        reply = {
-                "cert": cert,
-                "message": message,
-        }
-
-    else:
-        reply = {
-                "cert": "",
-                "message": message,
-        }
-
-    return reply
+def build_reply(cert="", message=""):
+    return {
+        "cert": cert,
+        "message": message,
+    }
 
 
 def check_request(message):
@@ -271,15 +261,6 @@ def check_auth(socket, request, log_messages):
         raise CAError(auth_reply["message"])
 
 
-def process_request(socket, request, log_messages):
-    try:
-        check_request(request)
-        check_auth(socket, request, log_messages)
-        return build_reply(request["sn"])
-    except CAError as e:
-        return build_reply("", str(e))
-
-
 def get_request(r, queue, timeout=0):
     item = r.brpop(queue, timeout)
     request = redis_item_to_dict(item[1])
@@ -304,7 +285,13 @@ def main():
         if ctx.args.log_messages:
             log_message(QUEUE_NAME, request, direction="in")
 
-        reply = process_request(socket, request, ctx.args.log_messages)
+        try:
+            check_request(request)
+            check_auth(socket, request, ctx.args.log_messages)
+            cert = issue_cert(request)
+            reply = build_reply(cert=cert)
+        except CAError as e:
+            reply = build_reply(message=str(e))
 
         redis_key = redis_cert_key(request)
         if ctx.args.log_messages:
