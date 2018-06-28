@@ -176,7 +176,12 @@ def build_request():
         hash_digest = hashlib.sha1(bytes(to_hash, encoding='utf-8'))
     digest = hash_digest.hexdigest()
 
-    csr = str(gen_csr(device_id), encoding='utf-8')
+    if random.choice((True, True, False)):
+        subject = device_id
+    else:
+        subject = secrets.token_hex(8)
+
+    csr = str(gen_csr(subject), encoding='utf-8')
 
     request = {
             "sn": device_id,
