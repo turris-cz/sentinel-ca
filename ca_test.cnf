@@ -1,0 +1,45 @@
+## openssl.cnf
+#
+# Configuration for Sentiel CA
+
+# Request section ====================================================
+[ req ]
+# DN
+distinguished_name  = req_distinguished_name
+prompt              = no
+# mask for permitted string types
+string_mask         = utf8only
+
+
+# extensions for self-signed certificate
+x509_extensions     = v3_ca
+
+
+# default DN parameters ------------------------------------
+[ req_distinguished_name ]
+# Subject fields
+C       = CZ
+L       = Prague
+O       = CZ.NIC, z.s.p.o.
+OU      = Turris
+# Common name
+CN      = Testing CA X2
+
+
+# self-signed extensions -----------------------------------
+[ v3_ca ]
+
+# PKIX recommendation.
+subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid:always,issuer
+basicConstraints        = critical,CA:true
+
+# only for issuing certs and CRL
+keyUsage                = cRLSign, keyCertSign
+
+
+
+# CRL extensions section =============================================
+[ crl_ext ]
+
+authorityKeyIdentifier  = keyid:always
