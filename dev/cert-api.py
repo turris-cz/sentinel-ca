@@ -150,13 +150,13 @@ def gen_key(key_type="ecdsa", curve=ECDSA_CURVE, rsa_bits=RSA_BITS, rsa_exponent
     return private_key
 
 
-def gen_csr(sn):
+def gen_csr(device_id):
     # 1 of 4 keys would be a RSA
     key_type = random.choice(("ecdsa", "ecdsa", "ecdsa", "rsa"))
     private_key = gen_key(key_type)
 
     subject = x509.Name([
-            x509.NameAttribute(NameOID.COMMON_NAME, sn),
+            x509.NameAttribute(NameOID.COMMON_NAME, device_id),
     ])
     csr = x509.CertificateSigningRequestBuilder(subject_name=subject)
     csr = csr.sign(private_key, hashes.SHA256(), default_backend())
@@ -165,10 +165,10 @@ def gen_csr(sn):
 
 
 def build_request():
-    sn = secrets.token_hex(8)
+    device_id = secrets.token_hex(8)
     sid = secrets.token_hex(16)
     nonce = secrets.token_hex(16)
-    to_hash = "{}:{}".format(sn, nonce)
+    to_hash = "{}:{}".format(device_id, nonce)
 
     if random.choice((True, False)):
         hash_digest = hashlib.sha256(bytes(to_hash, encoding='utf-8'))
@@ -176,10 +176,10 @@ def build_request():
         hash_digest = hashlib.sha1(bytes(to_hash, encoding='utf-8'))
     digest = hash_digest.hexdigest()
 
-    csr = str(gen_csr(sn), encoding='utf-8')
+    csr = str(gen_csr(device_id), encoding='utf-8')
 
     request = {
-            "sn": sn,
+            "sn": device_id,
             "sid": sid,
             "auth_type": AUTH_TYPE,
             "nonce": nonce,

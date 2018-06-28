@@ -55,8 +55,8 @@ def check_message(msg_type, message):
             raise CheckerError("'{}' is missing in the message".format(key))
 
 
-def process_message(sn, nonce, digest):
-    to_hash = "{}:{}".format(sn, nonce)
+def process_message(device_id, nonce, digest):
+    to_hash = "{}:{}".format(device_id, nonce)
     hash_digest = hashlib.sha256(bytes(to_hash, encoding='utf-8'))
     if digest != hash_digest.hexdigest():
         raise CheckerError("Provided digest is not valid")
