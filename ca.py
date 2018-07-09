@@ -137,6 +137,17 @@ def config(config_path):
     return conf
 
 
+def get_cert_common_name(cert):
+    try:
+        common_name = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    except Exception:
+        # catch all Exceptions as the x509 certificate interface is not so clean
+        logger.exception("Common name is not present")
+        common_name = "N/A"
+
+    return common_name
+
+
 def check_cert_private_key_match(cert, key):
     cert_key = cert.public_key()
     public_key = key.public_key()
@@ -323,10 +334,7 @@ def issue_cert(db, ca_key, ca_cert, request):
     )
     cert = cert.sign(ca_key, SIGNING_HASH, default_backend())
 
-    cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
-    store_cert(db, serial_number, identity, not_before, not_after, cert_bytes)
-
-    return cert_bytes
+    return cert
 
 
 def init_ca(cert_path, key_path, key_password=None, ignore_errors=False):
@@ -383,7 +391,13 @@ def get_unique_serial_number(db):
     raise CAError("Could not get unique certificate s/n")
 
 
-def store_cert(db, serial_number, identity, not_before, not_after, cert_bytes):
+def store_cert(db, cert):
+    serial_number = cert.serial_number
+    identity = get_cert_common_name(cert)
+    not_before = cert.not_valid_before
+    not_after = cert.not_valid_after
+    cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
+
     c = db.cursor()
     c.execute("""
             INSERT INTO certs(sn, common_name, not_before, not_after, cert)
@@ -416,11 +430,20 @@ def redis_cert_key(request):
     return "{}:{}:{}".format(CERT_KEYSPACE, request["sn"], request["sid"])
 
 
-def build_reply(cert_bytes=b'', message=""):
-    cert_str = str(cert_bytes, encoding='utf-8')
+def build_reply(cert):
+    cert_str = str(
+        cert.public_bytes(serialization.Encoding.PEM),
+        encoding='utf-8'
+    )
 
     return {
         "cert": cert_str,
+        "message": "",
+    }
+
+def build_error(message):
+    return {
+        "cert": "",
         "message": message,
     }
 
@@ -466,6 +489,10 @@ def get_request(r, queue, timeout=0):
     return request
 
 
+def send_reply(r, key, reply):
+    r.set(key, json.dumps(reply), ex=KEY_TTL)
+
+
 def main():
     ctx = sn.SN(zmq.Context.instance(), get_argparser(sn.get_arg_parser()))
     socket = ctx.get_socket(("checker", "REQ"))
@@ -481,22 +508,24 @@ def main():
     db = init_db(conf)
 
     while True:
-        request = get_request(r, queue=QUEUE_NAME)
-        if ctx.args.log_messages:
-            log_message(QUEUE_NAME, request, direction="in")
-
         try:
+            request = get_request(r, queue=QUEUE_NAME)
+            if ctx.args.log_messages:
+                log_message(QUEUE_NAME, request, direction="in")
+
             check_request(request)
             check_auth(socket, request, ctx.args.log_messages)
             cert = issue_cert(db, ca_key, ca_cert, request)
-            reply = build_reply(cert_bytes=cert)
+            store_cert(db, cert)
+
+            reply = build_reply(cert)
         except CAError as e:
-            reply = build_reply(message=str(e))
+            reply = build_error(str(e))
 
         redis_key = redis_cert_key(request)
         if ctx.args.log_messages:
             log_message(redis_key, reply, direction="out", extra_line=True)
-        r.set(redis_key, json.dumps(reply), ex=KEY_TTL)
+        send_reply(r, redis_key, reply)
 
 
 if __name__ == "__main__":
