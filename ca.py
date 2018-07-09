@@ -7,6 +7,7 @@ import sys
 import datetime
 import configparser
 import json
+import logging
 
 import redis
 import sqlite3
@@ -23,6 +24,7 @@ from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.hazmat.primitives import hashes
 
+logger = logging.getLogger("ca")
 
 CONFIG_DEFAULT_PATH = "ca.ini"
 
@@ -73,11 +75,6 @@ class CAError(Exception):
     pass
 
 
-def log_message(msg_type, message, direction="none", extra_line=False):
-    symbol = LOG_MESSAGE_MAPPER[direction]
-    print("{} {}: {}".format(symbol, msg_type, message))
-    if extra_line:
-        print("")
 
 
 def get_argparser(parser):
@@ -105,11 +102,7 @@ def get_argparser(parser):
             metavar="CONF",
             help="Path to configuration file"
     )
-    parser.add_argument(
-            "-l", "--log-messages",
-            action='store_true',
-            help="Log incoming/outgoing messages"
-    )
+
     return parser
 
 
@@ -382,6 +375,7 @@ def get_unique_serial_number(db):
         c.execute('SELECT * FROM certs WHERE sn=?', (str(serial_number),))
         if c.fetchone():
             c.close()
+            logger.warning("random_serial_number() returns duplicated s/n")
             continue
 
         # if there is no cert with this S/N
@@ -467,16 +461,14 @@ def check_auth_reply(msg_type, message):
 
 
 """checker via zmq"""
-def check_auth(socket, request, log_messages):
+def check_auth(socket, request):
     auth_request = {key:request[key] for key in AUTH_REQUEST_KEYS}
     socket.send_multipart(sn.encode_msg(MESSAGE_TYPE, auth_request))
-    if log_messages:
-        log_message(MESSAGE_TYPE, auth_request, direction="out")
+    logger.debug("%s %s: %s", LOG_MESSAGE_MAPPER["out"], MESSAGE_TYPE, auth_request)
 
     zmq_reply = socket.recv_multipart()
     msg_type, auth_reply = sn.parse_msg(zmq_reply)
-    if log_messages:
-        log_message(msg_type, auth_reply, direction="in")
+    logger.debug("%s %s: %s", LOG_MESSAGE_MAPPER["in"], msg_type, auth_reply)
 
     check_auth_reply(msg_type, auth_reply)
     if auth_reply["status"] != "ok":
@@ -510,21 +502,21 @@ def main():
     while True:
         try:
             request = get_request(r, queue=QUEUE_NAME)
-            if ctx.args.log_messages:
-                log_message(QUEUE_NAME, request, direction="in")
+            logger.debug("%s %s: %s", LOG_MESSAGE_MAPPER["in"], QUEUE_NAME, request)
 
             check_request(request)
-            check_auth(socket, request, ctx.args.log_messages)
+            check_auth(socket, request)
             cert = issue_cert(db, ca_key, ca_cert, request)
             store_cert(db, cert)
 
+            logger.info("Certificate with s/n %d for %s was issued", cert.serial_number, get_cert_common_name(cert))
             reply = build_reply(cert)
         except CAError as e:
+            logger.error("Invalid request: %s", str(e))
             reply = build_error(str(e))
 
         redis_key = redis_cert_key(request)
-        if ctx.args.log_messages:
-            log_message(redis_key, reply, direction="out", extra_line=True)
+        logger.debug("%s %s: %s", LOG_MESSAGE_MAPPER["out"], redis_key, reply)
         send_reply(r, redis_key, reply)
 
 
