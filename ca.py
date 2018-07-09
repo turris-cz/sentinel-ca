@@ -68,7 +68,11 @@ CERT_DAYS = 30
 class CAError(Exception):
     pass
 
+class CASetupError(CAError):
+    pass
 
+class CARequestError(CAError):
+    pass
 
 
 def get_argparser(parser):
@@ -140,39 +144,39 @@ def check_cert_private_key_match(cert, key):
     public_key = key.public_key()
 
     if public_key.public_numbers() != cert_key.public_numbers():
-        raise CAError("Private key does not match with certificate public key")
+        raise CASetupError("Private key does not match with certificate public key")
 
 def check_cert_valid_dates(cert):
     now = datetime.datetime.utcnow()
     if now < cert.not_valid_before:
-        raise CAError("Certificate is not valid yet")
+        raise CASetupError("Certificate is not valid yet")
 
     if cert.not_valid_after < now:
-        raise CAError("Certificate is expired")
+        raise CASetupError("Certificate is expired")
 
 def check_cert_basic_constraints(cert):
     try:
         ext = cert.extensions.get_extension_for_class(x509.BasicConstraints)
     except x509.ExtensionNotFound:
-        raise CAError("Certificate does not have Basic Constraints extension")
+        raise CASetupError("Certificate does not have Basic Constraints extension")
 
     if not ext.value.ca:
-        raise CAError("Certificate is not a CA cert")
+        raise CASetupError("Certificate is not a CA cert")
 
 def check_cert_key_usage(cert):
     try:
         ext = cert.extensions.get_extension_for_class(x509.KeyUsage)
     except x509.ExtensionNotFound:
-        raise CAError("Certificate does not have Key Usage extension")
+        raise CASetupError("Certificate does not have Key Usage extension")
 
     if not ext.value.key_cert_sign:
-        raise CAError("CA key usage does not allow cert signing")
+        raise CASetupError("CA key usage does not allow cert signing")
 
 def check_cert_subject_key_identifier(cert):
     try:
         ext = cert.extensions.get_extension_for_class(x509.SubjectKeyIdentifier)
     except x509.ExtensionNotFound:
-        raise CAError("Certificate does not have Subject Key Identifier extension")
+        raise CASetupError("Certificate does not have Subject Key Identifier extension")
 
 def check_cert(cert, key, ignore_errors):
     try:
@@ -180,9 +184,10 @@ def check_cert(cert, key, ignore_errors):
         check_cert_basic_constraints(cert)
         check_cert_key_usage(cert)
         check_cert_subject_key_identifier(cert)
+        # TODO what if it expire soon?
         check_cert_valid_dates(cert)
 
-    except CAError as e:
+    except CASetupError as e:
         print(str(e), file=sys.stderr)
         if not ignore_errors:
             sys.exit(2)
@@ -197,7 +202,7 @@ def load_csr(csr_str):
                 backend=default_backend()
         )
     except (UnicodeEncodeError, ValueError):
-        raise CAError("Invalid CSR format")
+        raise CARequestError("Invalid CSR format")
 
     return csr
 
@@ -205,20 +210,20 @@ def load_csr(csr_str):
 def check_csr_common_name(csr, identity):
     common_names = csr.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)
     if len(common_names) != 1:
-        raise CAError("CSR has not exactly one CommonName")
+        raise CARequestError("CSR has not exactly one CommonName")
 
     common_name = common_names[0].value
     if common_name != identity:
-        raise CAError("CSR CommonName ({}) does not match desired identity".format(common_name))
+        raise CARequestError("CSR CommonName ({}) does not match desired identity".format(common_name))
 
 def check_csr_hash(csr):
     h = csr.signature_hash_algorithm
     if type(h) not in ALLOWED_HASHES:
-        raise CAError("CSR is signed with not allowed hash ({})".format(h.name))
+        raise CARequestError("CSR is signed with not allowed hash ({})".format(h.name))
 
 def check_csr_signature(csr):
     if not csr.is_signature_valid:
-        raise CAError("Request signature is not valid")
+        raise CARequestError("Request signature is not valid")
 
 def check_csr(csr, device_id):
     check_csr_common_name(csr, device_id)
@@ -354,7 +359,7 @@ def init_db(conf):
         """)
         c.close()
     except sqlite3.OperationalError:
-        raise CAError("Incorrect DB scheme")
+        raise CASetupError("Incorrect DB scheme")
 
     return conn
 
@@ -376,6 +381,7 @@ def get_unique_serial_number(db):
         c.close()
         return serial_number
 
+    # this exception will not be handled
     raise CAError("Could not get unique certificate s/n")
 
 
@@ -440,18 +446,18 @@ def check_request(message):
     # check presence of needed keys
     for key in REQUIRED_REQUEST_KEYS:
         if key not in message:
-            raise CAError("'{}' is missing in the request".format(key))
+            raise CARequestError("'{}' is missing in the request".format(key))
 
 
 def check_auth_reply(msg_type, message):
     # check message type
     if msg_type != MESSAGE_TYPE:
-        raise CAError("Unknown message type in auth reply '{}'".format(msg_type))
+        raise CARequestError("Unknown message type in auth reply '{}'".format(msg_type))
 
     # check presence of needed keys
     for key in REQUIRED_AUTH_REPLY_KEYS:
         if key not in message:
-            raise CAError("'{}' is missing in the auth reply".format(key))
+            raise CARequestError("'{}' is missing in the auth reply".format(key))
 
 
 """checker via zmq"""
@@ -466,7 +472,7 @@ def check_auth(socket, request):
 
     check_auth_reply(msg_type, auth_reply)
     if auth_reply["status"] != "ok":
-        raise CAError(auth_reply["message"])
+        raise CARequestError(auth_reply["message"])
 
 
 def get_request(r, queue, timeout=0):
@@ -506,7 +512,7 @@ def main():
 
             logger.info("Certificate with s/n %d for %s was issued", cert.serial_number, get_cert_common_name(cert))
             reply = build_reply(cert)
-        except CAError as e:
+        except CARequestError as e:
             logger.error("Invalid request: %s", str(e))
             reply = build_error(str(e))
 
