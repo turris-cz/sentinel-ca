@@ -192,6 +192,7 @@ def check_cert(cert, key, ignore_errors):
 
 def load_csr(csr_str):
     try:
+        # construct x509 request from PEM string
         csr_data = bytes(csr_str, encoding='utf-8')
         csr = x509.load_pem_x509_csr(
                 data=csr_data,
@@ -232,13 +233,15 @@ def build_subject(identity):
         x509.NameAttribute(NameOID.COMMON_NAME, identity),
     ])
 
-def build_aki(cert):
+def build_aki(issuer):
     try:
-        ski = cert.extensions.get_extension_for_class(x509.SubjectKeyIdentifier)
+        # construct AKI from issuer Subject Key Identifier if it has some
+        ski = issuer.extensions.get_extension_for_class(x509.SubjectKeyIdentifier)
         aki = x509.AuthorityKeyIdentifier.from_issuer_subject_key_identifier(ski)
 
     except x509.ExtensionNotFound:
-        public_key = cert.public_key()
+        # construct AKI from public key if issuer does not have SKI
+        public_key = issuer.public_key()
         aki = x509.AuthorityKeyIdentifier.from_issuer_public_key(public_key)
 
     return aki
@@ -362,7 +365,9 @@ def init_db(conf):
 
 
 def get_unique_serial_number(db):
-    for i in range(256):
+    # random_serial_number() gives unique values when everything is ok
+    # repeated s/n generation and check for accidental generation and/or OS issues
+    for i in range(42):
         serial_number = x509.random_serial_number()
 
         c = db.cursor()
