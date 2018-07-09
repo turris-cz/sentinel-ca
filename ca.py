@@ -354,7 +354,7 @@ def init_db(conf):
         # test table and columns existence
         c = conn.cursor()
         c.execute("""
-            SELECT sn, common_name, not_before, not_after, cert
+            SELECT sn, state, common_name, not_before, not_after, cert
               FROM certs
               LIMIT 1
         """)
@@ -394,10 +394,10 @@ def store_cert(db, cert):
 
     c = db.cursor()
     c.execute("""
-            INSERT INTO certs(sn, common_name, not_before, not_after, cert)
-            VALUES (?,?,?,?,?)
+            INSERT INTO certs(sn, state, common_name, not_before, not_after, cert)
+            VALUES (?,?,?,?,?,?)
             """,
-            (str(serial_number), identity, not_before, not_after, cert_bytes)
+            (str(serial_number), "valid", identity, not_before, not_after, cert_bytes)
     )
     c.close()
     db.commit()
