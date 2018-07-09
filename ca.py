@@ -198,8 +198,8 @@ def load_csr(csr_str):
                 data=csr_data,
                 backend=default_backend()
         )
-    except (UnicodeEncodeError, ValueError) as e:
-        raise CAError(str(e))
+    except (UnicodeEncodeError, ValueError):
+        raise CAError("Invalid CSR format")
 
     return csr
 
@@ -358,8 +358,8 @@ def init_db(conf):
               LIMIT 1
         """)
         c.close()
-    except sqlite3.OperationalError as e:
-        raise CAError(str(e))
+    except sqlite3.OperationalError:
+        raise CAError("Incorrect DB scheme")
 
     return conn
 
