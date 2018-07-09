@@ -55,12 +55,6 @@ REQUIRED_AUTH_REPLY_KEYS = [
     "message",
 ]
 
-LOG_MESSAGE_MAPPER = {
-    "in": "←",
-    "out": "→",
-    "none": " ",
-}
-
 SIGNING_HASH = hashes.SHA256()
 ALLOWED_HASHES = {
     hashes.SHA224,
@@ -464,11 +458,11 @@ def check_auth_reply(msg_type, message):
 def check_auth(socket, request):
     auth_request = {key:request[key] for key in AUTH_REQUEST_KEYS}
     socket.send_multipart(sn.encode_msg(MESSAGE_TYPE, auth_request))
-    logger.debug("%s %s: %s", LOG_MESSAGE_MAPPER["out"], MESSAGE_TYPE, auth_request)
+    logger.debug("ZMQ send %s: %s", MESSAGE_TYPE, auth_request)
 
     zmq_reply = socket.recv_multipart()
     msg_type, auth_reply = sn.parse_msg(zmq_reply)
-    logger.debug("%s %s: %s", LOG_MESSAGE_MAPPER["in"], msg_type, auth_reply)
+    logger.debug("ZMQ recv %s: %s", msg_type, auth_reply)
 
     check_auth_reply(msg_type, auth_reply)
     if auth_reply["status"] != "ok":
@@ -478,10 +472,12 @@ def check_auth(socket, request):
 def get_request(r, queue, timeout=0):
     item = r.brpop(queue, timeout)
     request = redis_item_to_dict(item[1])
+    logger.debug("REDIS brpop %s: %s", queue, request)
     return request
 
 
 def send_reply(r, key, reply):
+    logger.debug("REDIS set %s: %s", key, reply)
     r.set(key, json.dumps(reply), ex=KEY_TTL)
 
 
@@ -502,7 +498,6 @@ def main():
     while True:
         try:
             request = get_request(r, queue=QUEUE_NAME)
-            logger.debug("%s %s: %s", LOG_MESSAGE_MAPPER["in"], QUEUE_NAME, request)
 
             check_request(request)
             check_auth(socket, request)
@@ -516,7 +511,6 @@ def main():
             reply = build_error(str(e))
 
         redis_key = redis_cert_key(request)
-        logger.debug("%s %s: %s", LOG_MESSAGE_MAPPER["out"], redis_key, reply)
         send_reply(r, redis_key, reply)
 
 
