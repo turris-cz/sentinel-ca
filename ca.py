@@ -3,10 +3,8 @@
 #
 # Sentinel:CA: a certificator component
 
-import json
 import logging
 
-import redis
 import zmq
 import sn
 
@@ -14,20 +12,6 @@ import sentinel_ca
 
 
 logger = logging.getLogger("ca")
-
-STATUS_KEYSPACE = "auth_state"
-CERT_KEYSPACE = "certificate"
-KEY_TTL = 2*60 # 2 m
-
-QUEUE_NAME = "csr"
-REQUIRED_REQUEST_KEYS = [
-    "sn",
-    "sid",
-    "auth_type",
-    "nonce",
-    "digest",
-    "csr_str",
-]
 
 MESSAGE_TYPE = "sentinel/certificator/checker"
 AUTH_REQUEST_KEYS = [
@@ -41,65 +25,6 @@ REQUIRED_AUTH_REPLY_KEYS = [
     "status",
     "message",
 ]
-
-def init_redis(conf):
-    redis_socket = None
-    if conf.get("redis", "socket"):
-        redis_socket = conf.get("redis", "socket")
-
-    return redis.StrictRedis(
-            host=conf.get("redis", "host"),
-            port=conf.getint("redis", "port"),
-            password=conf.get("redis", "password"),
-            unix_socket_path=redis_socket
-    )
-
-
-def get_redis_item(r, queue, timeout=0):
-    try:
-        return r.brpop(queue, timeout)[1]
-    except TypeError as e:
-        # when brpop returns None
-        logger.exception(e)
-        raise CAParseError("No redis item received")
-
-
-def redis_item_to_dict(item):
-    try:
-        return json.loads(str(item, encoding='utf-8'))
-    except (UnicodeDecodeError, json.JSONDecodeError) as e:
-        # when item is not a UTF-8 json
-        logger.exception(e)
-        raise CAParseError("Invalid request format")
-
-
-def redis_cert_key(request):
-    return "{}:{}:{}".format(CERT_KEYSPACE, request["sn"], request["sid"])
-
-
-def build_reply(cert):
-    cert_str = str(
-        sentinel_ca.get_cert_bytes(cert),
-        encoding='utf-8'
-    )
-
-    return {
-        "cert": cert_str,
-        "message": "",
-    }
-
-def build_error(message):
-    return {
-        "cert": "",
-        "message": message,
-    }
-
-
-def check_request(message):
-    # check presence of needed keys
-    for key in REQUIRED_REQUEST_KEYS:
-        if key not in message:
-            raise CAParseError("'{}' is missing in the request".format(key))
 
 
 def check_auth_reply(msg_type, message):
@@ -128,22 +53,10 @@ def check_auth(socket, request):
         raise CARequestError(auth_reply["message"])
 
 
-def get_request(r, queue):
-    item = get_redis_item(r, queue)
-    request = redis_item_to_dict(item)
-    logger.debug("REDIS brpop %s: %s", queue, request)
-    return request
-
-
-def send_reply(r, key, reply):
-    logger.debug("REDIS set %s: %s", key, reply)
-    r.set(key, json.dumps(reply), ex=KEY_TTL)
-
-
 def process(r, socket, db, ca_key, ca_cert):
     try:
-        request = get_request(r, queue=QUEUE_NAME)
-        check_request(request)
+        request = sentinel_ca.get_request(r)
+        sentinel_ca.check_request(request)
     except CAParseError as e:
         logger.error("Malformed request: %s", str(e))
         return
@@ -158,13 +71,13 @@ def process(r, socket, db, ca_key, ca_cert):
                 cert.serial_number,
                 sentinel_ca.get_cert_common_name(cert)
         )
-        reply = build_reply(cert)
+        reply = sentinel_ca.build_reply(cert)
     except CARequestError as e:
         logger.error("Invalid request: %s", str(e))
-        reply = build_error(str(e))
+        reply = sentinel_ca.build_error(str(e))
 
-    redis_key = redis_cert_key(request)
-    send_reply(r, redis_key, reply)
+    redis_key = sentinel_ca.redis_cert_key(request)
+    sentinel_ca.send_reply(r, redis_key, reply)
 
 
 def main():
@@ -181,7 +94,7 @@ def main():
     )
 
     conf = sentinel_ca.config(ctx.args.config)
-    r = init_redis(conf)
+    r = sentinel_ca.init_redis(conf)
     db = sentinel_ca.init_db(conf)
 
     while True:
