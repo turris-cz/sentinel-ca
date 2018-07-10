@@ -504,6 +504,29 @@ def send_reply(r, key, reply):
     r.set(key, json.dumps(reply), ex=KEY_TTL)
 
 
+def process(r, socket, db, ca_key, ca_cert):
+    try:
+        request = get_request(r, queue=QUEUE_NAME)
+        check_request(request)
+    except CAParseError as e:
+        logger.error("Malformed request: %s", str(e))
+        return
+
+    try:
+        check_auth(socket, request)
+        cert = issue_cert(db, ca_key, ca_cert, request)
+        store_cert(db, cert)
+
+        logger.info("Certificate with s/n %d for %s was issued", cert.serial_number, get_cert_common_name(cert))
+        reply = build_reply(cert)
+    except CARequestError as e:
+        logger.error("Invalid request: %s", str(e))
+        reply = build_error(str(e))
+
+    redis_key = redis_cert_key(request)
+    send_reply(r, redis_key, reply)
+
+
 def main():
     ctx = sn.SN(zmq.Context.instance(), get_argparser(sn.get_arg_parser()))
     socket = ctx.get_socket(("checker", "REQ"))
@@ -519,26 +542,7 @@ def main():
     db = init_db(conf)
 
     while True:
-        try:
-            request = get_request(r, queue=QUEUE_NAME)
-            check_request(request)
-        except CAParseError as e:
-            logger.error("Malformed request: %s", str(e))
-            continue
-
-        try:
-            check_auth(socket, request)
-            cert = issue_cert(db, ca_key, ca_cert, request)
-            store_cert(db, cert)
-
-            logger.info("Certificate with s/n %d for %s was issued", cert.serial_number, get_cert_common_name(cert))
-            reply = build_reply(cert)
-        except CARequestError as e:
-            logger.error("Invalid request: %s", str(e))
-            reply = build_error(str(e))
-
-        redis_key = redis_cert_key(request)
-        send_reply(r, redis_key, reply)
+        process(r, socket, db, ca_key, ca_cert)
 
 
 if __name__ == "__main__":
