@@ -7,7 +7,6 @@ import json
 import logging
 
 import redis
-import sqlite3
 import zmq
 import sn
 
@@ -42,43 +41,6 @@ REQUIRED_AUTH_REPLY_KEYS = [
     "status",
     "message",
 ]
-
-
-def init_db(conf):
-    conn = sqlite3.connect(conf.get("db", "path"))
-
-    try:
-        # test table and columns existence
-        c = conn.cursor()
-        c.execute("""
-            SELECT sn, state, common_name, not_before, not_after, cert
-              FROM certs
-              LIMIT 1
-        """)
-        c.close()
-    except sqlite3.OperationalError:
-        raise CASetupError("Incorrect DB scheme")
-
-    return conn
-
-
-def store_cert(db, cert):
-    serial_number = cert.serial_number
-    identity = sentinel_ca.get_cert_common_name(cert)
-    not_before = cert.not_valid_before
-    not_after = cert.not_valid_after
-    cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
-
-    c = db.cursor()
-    c.execute("""
-            INSERT INTO certs(sn, state, common_name, not_before, not_after, cert)
-            VALUES (?,?,?,?,?,?)
-            """,
-            (str(serial_number), "valid", identity, not_before, not_after, cert_bytes)
-    )
-    c.close()
-    db.commit()
-
 
 def init_redis(conf):
     redis_socket = None
@@ -189,7 +151,7 @@ def process(r, socket, db, ca_key, ca_cert):
     try:
         check_auth(socket, request)
         cert = sentinel_ca.issue_cert(db, ca_key, ca_cert, request)
-        store_cert(db, cert)
+        sentinel_ca.store_cert(db, cert)
 
         logger.info(
                 "Certificate with s/n %d for %s was issued",
@@ -220,7 +182,7 @@ def main():
 
     conf = sentinel_ca.config(ctx.args.config)
     r = init_redis(conf)
-    db = init_db(conf)
+    db = sentinel_ca.init_db(conf)
 
     while True:
         process(r, socket, db, ca_key, ca_cert)
