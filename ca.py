@@ -463,7 +463,7 @@ def check_request(message):
     # check presence of needed keys
     for key in REQUIRED_REQUEST_KEYS:
         if key not in message:
-            raise CARequestError("'{}' is missing in the request".format(key))
+            raise CAParseError("'{}' is missing in the request".format(key))
 
 
 def check_auth_reply(msg_type, message):
@@ -521,12 +521,12 @@ def main():
     while True:
         try:
             request = get_request(r, queue=QUEUE_NAME)
+            check_request(request)
         except CAParseError as e:
             logger.error("Malformed request: %s", str(e))
             continue
 
         try:
-            check_request(request)
             check_auth(socket, request)
             cert = issue_cert(db, ca_key, ca_cert, request)
             store_cert(db, cert)
