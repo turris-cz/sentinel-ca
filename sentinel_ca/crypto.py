@@ -188,6 +188,10 @@ def check_csr(csr, device_id):
     check_csr_signature(csr)
 
 
+def get_cert_bytes(cert):
+    return cert.public_bytes(serialization.Encoding.PEM)
+
+
 def get_cert_common_name(cert):
     try:
         common_name = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value

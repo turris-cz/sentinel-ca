@@ -11,8 +11,6 @@ import sqlite3
 import zmq
 import sn
 
-from cryptography.hazmat.primitives import serialization
-
 import sentinel_ca
 
 
@@ -119,7 +117,7 @@ def redis_cert_key(request):
 
 def build_reply(cert):
     cert_str = str(
-        cert.public_bytes(serialization.Encoding.PEM),
+        sentinel_ca.get_cert_bytes(cert),
         encoding='utf-8'
     )
 
