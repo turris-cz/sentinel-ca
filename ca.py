@@ -71,6 +71,9 @@ class CAError(Exception):
 class CASetupError(CAError):
     pass
 
+class CAParseError(CAError):
+    pass
+
 class CARequestError(CAError):
     pass
 
@@ -416,8 +419,22 @@ def init_redis(conf):
     )
 
 
+def get_redis_item(r, queue, timeout=0):
+    try:
+        return r.brpop(queue, timeout)[1]
+    except TypeError as e:
+        # when brpop returns None
+        logger.exception(e)
+        raise CAParseError("No redis item received")
+
+
 def redis_item_to_dict(item):
-    return json.loads(str(item, encoding='utf-8'))
+    try:
+        return json.loads(str(item, encoding='utf-8'))
+    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+        # when item is not a UTF-8 json
+        logger.exception(e)
+        raise CAParseError("Invalid request format")
 
 
 def redis_cert_key(request):
@@ -475,9 +492,9 @@ def check_auth(socket, request):
         raise CARequestError(auth_reply["message"])
 
 
-def get_request(r, queue, timeout=0):
-    item = r.brpop(queue, timeout)
-    request = redis_item_to_dict(item[1])
+def get_request(r, queue):
+    item = get_redis_item(r, queue)
+    request = redis_item_to_dict(item)
     logger.debug("REDIS brpop %s: %s", queue, request)
     return request
 
@@ -504,7 +521,11 @@ def main():
     while True:
         try:
             request = get_request(r, queue=QUEUE_NAME)
+        except CAParseError as e:
+            logger.error("Malformed request: %s", str(e))
+            continue
 
+        try:
             check_request(request)
             check_auth(socket, request)
             cert = issue_cert(db, ca_key, ca_cert, request)
