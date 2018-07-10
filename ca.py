@@ -18,7 +18,7 @@ def process(r, socket, db, ca_key, ca_cert):
     try:
         request = sentinel_ca.get_request(r)
         sentinel_ca.check_request(request)
-    except CAParseError as e:
+    except sentinel_ca.CAParseError as e:
         logger.error("Malformed request: %s", str(e))
         return
 
@@ -33,7 +33,7 @@ def process(r, socket, db, ca_key, ca_cert):
                 sentinel_ca.get_cert_common_name(cert)
         )
         reply = sentinel_ca.build_reply(cert)
-    except CARequestError as e:
+    except sentinel_ca.CARequestError as e:
         logger.error("Invalid request: %s", str(e))
         reply = sentinel_ca.build_error(str(e))
 
