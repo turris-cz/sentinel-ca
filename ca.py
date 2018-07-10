@@ -5,7 +5,6 @@
 
 import sys
 import datetime
-import configparser
 import json
 import logging
 
@@ -24,9 +23,10 @@ from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.hazmat.primitives import hashes
 
-logger = logging.getLogger("ca")
+import sentinel_ca
 
-CONFIG_DEFAULT_PATH = "ca.ini"
+
+logger = logging.getLogger("ca")
 
 STATUS_KEYSPACE = "auth_state"
 CERT_KEYSPACE = "certificate"
@@ -76,59 +76,6 @@ class CAParseError(CAError):
 
 class CARequestError(CAError):
     pass
-
-
-def get_argparser(parser):
-    parser.add_argument(
-            "-C", "--ca-cert",
-            required=True,
-            metavar="CERT",
-            help="Certificate of the CA"
-    )
-    parser.add_argument(
-            "-K", "--ca-key",
-            required=True,
-            metavar="KEY",
-            help="Private key of the CA"
-    )
-    parser.add_argument(
-            "-F", "--ca-ignore-errors",
-            action='store_true',
-            help="Ignore cert and/or key checks errors"
-    )
-    parser.add_argument(
-            "-c", "--config",
-            required=True,
-            default=CONFIG_DEFAULT_PATH,
-            metavar="CONF",
-            help="Path to configuration file"
-    )
-
-    return parser
-
-
-def prepare_config():
-    conf = configparser.ConfigParser()
-
-    conf.add_section("redis")
-    conf.set("redis", "socket", "")
-    conf.set("redis", "host", "127.0.0.1")
-    conf.set("redis", "port", "6379")
-    conf.set("redis", "password", "")
-
-    conf.add_section("db")
-    conf.set("db", "path", "ca.db")
-
-    return conf
-
-
-def config(config_path):
-    conf = prepare_config()
-    res = conf.read(config_path)
-    if config_path not in res:
-        raise FileNotFoundError()
-
-    return conf
 
 
 def get_cert_common_name(cert):
@@ -528,7 +475,10 @@ def process(r, socket, db, ca_key, ca_cert):
 
 
 def main():
-    ctx = sn.SN(zmq.Context.instance(), get_argparser(sn.get_arg_parser()))
+    ctx = sn.SN(
+            zmq.Context.instance(),
+            sentinel_ca.get_argparser(sn.get_arg_parser())
+    )
     socket = ctx.get_socket(("checker", "REQ"))
 
     ca_cert, ca_key = init_ca(
@@ -537,7 +487,7 @@ def main():
             ignore_errors=ctx.args.ca_ignore_errors
     )
 
-    conf = config(ctx.args.config)
+    conf = sentinel_ca.config(ctx.args.config)
     r = init_redis(conf)
     db = init_db(conf)
 
