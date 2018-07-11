@@ -3,7 +3,11 @@ Cryptography-related tasks for Sentinel:CA
 """
 
 import datetime
+import logging
 import sys
+
+# to setup logger handlers
+import sn
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
@@ -13,6 +17,8 @@ from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 from cryptography.hazmat.primitives import hashes
 
 from .exceptions import CAError, CASetupError, CARequestError
+
+logger = logging.getLogger("ca")
 
 
 CERT_DAYS = 30

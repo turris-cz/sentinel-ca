@@ -3,10 +3,16 @@ Redis wrappers for Sentinel:CA
 """
 
 import json
+import logging
 import redis
+
+# to setup logger handlers
+import sn
 
 from .crypto import get_cert_bytes
 from .exceptions import CAParseError
+
+logger = logging.getLogger("ca")
 
 
 KEY_TTL = 2*60

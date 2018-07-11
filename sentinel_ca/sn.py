@@ -2,9 +2,13 @@
 ZMQ and Sentinel Network functions for Sentinel:CA
 """
 
+import logging
+
 import sn
 
 from .exceptions import CAParseError, CARequestError
+
+logger = logging.getLogger("ca")
 
 
 MESSAGE_TYPE = "sentinel/certificator/checker"
