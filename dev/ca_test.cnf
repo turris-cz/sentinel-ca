@@ -1,6 +1,9 @@
 ## openssl.cnf
 #
 # Configuration for Sentiel CA
+#
+# openssl req -new -x509 -config ca_test.cnf -days 90 -key key.pem -out cert.pem
+
 
 # Request section ====================================================
 [ req ]
@@ -23,7 +26,7 @@ L       = Prague
 O       = CZ.NIC, z.s.p.o.
 OU      = Turris
 # Common name
-CN      = Testing CA X2
+CN      = Testing CA X4
 
 
 # self-signed extensions -----------------------------------
