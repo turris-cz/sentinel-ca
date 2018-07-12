@@ -231,7 +231,14 @@ def get_unique_serial_number(db):
     raise CAError("Could not get unique certificate s/n")
 
 
-def init_ca(cert_path, key_path, key_password=None, ignore_errors=False):
+def init_ca(conf, ignore_errors=False):
+    cert_path = conf.get("ca", "cert")
+    key_path = conf.get("ca", "key")
+    if conf.get("ca", "password"):
+        key_password = bytes(conf.get("ca", "password"), encoding='utf-8')
+    else:
+        key_password = None
+
     with open(cert_path, 'rb') as f:
         cert = x509.load_pem_x509_certificate(
                 data=f.read(),

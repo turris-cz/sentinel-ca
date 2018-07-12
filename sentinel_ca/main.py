@@ -24,13 +24,9 @@ def init():
     )
     socket = ctx.get_socket(("checker", "REQ"))
 
-    ca_cert, ca_key = init_ca(
-            ctx.args.ca_cert,
-            ctx.args.ca_key,
-            ignore_errors=ctx.args.ca_ignore_errors
-    )
-
     conf = config(ctx.args.config)
+
+    ca_cert, ca_key = init_ca(conf, ctx.args.ca_ignore_errors)
     r = init_redis(conf)
     db = init_db(conf)
 

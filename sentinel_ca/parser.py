@@ -9,18 +9,6 @@ CONFIG_DEFAULT_PATH = "ca.ini"
 
 def get_argparser(parser):
     parser.add_argument(
-            "-C", "--ca-cert",
-            required=True,
-            metavar="CERT",
-            help="Certificate of the CA"
-    )
-    parser.add_argument(
-            "-K", "--ca-key",
-            required=True,
-            metavar="KEY",
-            help="Private key of the CA"
-    )
-    parser.add_argument(
             "-F", "--ca-ignore-errors",
             action='store_true',
             help="Ignore cert and/or key checks errors"
@@ -47,6 +35,11 @@ def prepare_config():
 
     conf.add_section("db")
     conf.set("db", "path", "ca.db")
+
+    conf.add_section("ca")
+    conf.set("ca", "cert", "")
+    conf.set("ca", "key", "")
+    conf.set("ca", "password", "")
 
     return conf
 
