@@ -2,6 +2,7 @@
 Sentinel:CA python package
 """
 
+from sentinel_ca.ca import CA
 from sentinel_ca.exceptions import *
 from sentinel_ca.main import run
 from sentinel_ca.sn import get_argparser, config

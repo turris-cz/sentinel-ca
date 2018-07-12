@@ -21,9 +21,6 @@ from .exceptions import CAError, CASetupError, CARequestError
 logger = logging.getLogger("ca")
 
 
-CERT_DAYS = 30
-SIGNING_HASH = hashes.SHA256()
-
 ALLOWED_HASHES = {
     hashes.SHA224,
     hashes.SHA256,
@@ -152,19 +149,13 @@ def check_cert_subject_key_identifier(cert):
         raise CASetupError("Certificate does not have Subject Key Identifier extension")
 
 
-def check_cert(cert, key, ignore_errors):
-    try:
-        check_cert_private_key_match(cert, key)
-        check_cert_basic_constraints(cert)
-        check_cert_key_usage(cert)
-        check_cert_subject_key_identifier(cert)
-        # TODO what if it expire soon?
-        check_cert_valid_dates(cert)
-
-    except CASetupError as e:
-        print(str(e), file=sys.stderr)
-        if not ignore_errors:
-            sys.exit(2)
+def check_cert(cert, key):
+    check_cert_private_key_match(cert, key)
+    check_cert_basic_constraints(cert)
+    check_cert_key_usage(cert)
+    check_cert_subject_key_identifier(cert)
+    # TODO what if it expire soon?
+    check_cert_valid_dates(cert)
 
 
 def check_csr_common_name(csr, identity):
@@ -229,54 +220,6 @@ def get_unique_serial_number(db):
 
     # this exception will not be handled
     raise CAError("Could not get unique certificate s/n")
-
-
-def init_ca(conf, ignore_errors=False):
-    cert_path = conf.get("ca", "cert")
-    key_path = conf.get("ca", "key")
-    if conf.get("ca", "password"):
-        key_password = bytes(conf.get("ca", "password"), encoding='utf-8')
-    else:
-        key_password = None
-
-    with open(cert_path, 'rb') as f:
-        cert = x509.load_pem_x509_certificate(
-                data=f.read(),
-                backend=default_backend()
-        )
-    with open(key_path, 'rb') as f:
-        key = serialization.load_pem_private_key(
-                data=f.read(),
-                password=key_password,
-                backend=default_backend()
-        )
-    check_cert(cert, key, ignore_errors)
-
-    return cert, key
-
-
-def issue_cert(db, ca_key, ca_cert, request):
-    csr = load_csr(request["csr_str"])
-    identity = request["sn"]
-
-    check_csr(csr, identity)
-
-    serial_number = get_unique_serial_number(db)
-    not_before = datetime.datetime.utcnow()
-    not_after = datetime.datetime.utcnow() + datetime.timedelta(days=CERT_DAYS)
-
-    cert = build_client_cert(
-            csr=csr,
-            serial_number=serial_number,
-            subject=build_subject(identity),
-            issuer=ca_cert.subject,
-            aki=build_aki(ca_cert),
-            not_before=not_before,
-            not_after=not_after,
-    )
-    cert = cert.sign(ca_key, SIGNING_HASH, default_backend())
-
-    return cert
 
 
 def load_csr(csr_str):
