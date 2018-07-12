@@ -1,7 +1,8 @@
 """
-ZMQ and Sentinel Network functions for Sentinel:CA
+Sentinel Network with arguments and config parser for Sentinel:CA
 """
 
+import configparser
 import logging
 
 import sn
@@ -10,6 +11,8 @@ from .exceptions import CAParseError, CARequestError
 
 logger = logging.getLogger("ca")
 
+
+CONFIG_DEFAULT_PATH = "ca.ini"
 
 MESSAGE_TYPE = "sentinel/certificator/checker"
 AUTH_REQUEST_KEYS = [
@@ -22,6 +25,52 @@ REQUIRED_AUTH_REPLY_KEYS = [
     "status",
     "message",
 ]
+
+
+def get_argparser(parser):
+    parser.add_argument(
+            "-c", "--config",
+            required=True,
+            default=CONFIG_DEFAULT_PATH,
+            metavar="CONF",
+            help="Path to configuration file"
+    )
+    parser.add_argument(
+            "-F", "--ca-ignore-errors",
+            action='store_true',
+            help="Ignore cert and/or key checks errors"
+    )
+
+    return parser
+
+
+def prepare_config():
+    conf = configparser.ConfigParser()
+
+    conf.add_section("redis")
+    conf.set("redis", "socket", "")
+    conf.set("redis", "host", "127.0.0.1")
+    conf.set("redis", "port", "6379")
+    conf.set("redis", "password", "")
+
+    conf.add_section("db")
+    conf.set("db", "path", "ca.db")
+
+    conf.add_section("ca")
+    conf.set("ca", "cert", "")
+    conf.set("ca", "key", "")
+    conf.set("ca", "password", "")
+
+    return conf
+
+
+def config(config_path):
+    conf = prepare_config()
+    res = conf.read(config_path)
+    if config_path not in res:
+        raise FileNotFoundError()
+
+    return conf
 
 
 def check_auth_reply(msg_type, message):

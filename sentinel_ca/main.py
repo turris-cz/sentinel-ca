@@ -10,9 +10,8 @@ import sn
 from .crypto import init_ca, issue_cert, get_cert_common_name
 from .db import init_db, store_cert
 from .exceptions import CAParseError, CARequestError
-from .parser import get_argparser, config
 from .redis import init_redis, get_request, check_request, build_reply, build_error, send_reply, redis_cert_key
-from .sn import check_auth
+from .sn import check_auth, config, get_argparser, init_sn
 
 logger = logging.getLogger("ca")
 
