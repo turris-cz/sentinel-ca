@@ -200,28 +200,6 @@ def get_cert_common_name(cert):
     return common_name
 
 
-"""Generate random serial number and ensure it is not used yet"""
-def get_unique_serial_number(db):
-    # random_serial_number() gives unique values when everything is ok
-    # repeated s/n generation and check for accidental generation and/or OS issues
-    for i in range(42):
-        serial_number = x509.random_serial_number()
-
-        c = db.cursor()
-        c.execute('SELECT * FROM certs WHERE sn=?', (str(serial_number),))
-        if c.fetchone():
-            c.close()
-            logger.warning("random_serial_number() returns duplicated s/n")
-            continue
-
-        # if there is no cert with this S/N
-        c.close()
-        return serial_number
-
-    # this exception will not be handled
-    raise CAError("Could not get unique certificate s/n")
-
-
 def load_csr(csr_str):
     try:
         # construct x509 request from PEM string

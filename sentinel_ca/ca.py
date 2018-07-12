@@ -3,15 +3,22 @@ Sentinel:CA certificate authority class
 """
 
 import datetime
+import logging
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 
-from .exceptions import CASetupError
+# to setup logger handlers
+import sn
+
+from .exceptions import CAError, CASetupError
 from .crypto import *
 from .db import store_cert
+
+logger = logging.getLogger("ca")
+
 
 CERT_DAYS = 30
 # The HashAlgorithm instance used to sign the certificates
@@ -55,7 +62,7 @@ class CA:
         csr = load_csr(csr_str)
         check_csr(csr, identity)
 
-        serial_number = get_unique_serial_number(self.db)
+        serial_number = self.get_unique_serial_number()
         not_before = datetime.datetime.utcnow()
         not_after = not_before + datetime.timedelta(days=CERT_DAYS)
 
@@ -72,3 +79,23 @@ class CA:
         store_cert(self.db, cert)
 
         return cert
+
+
+    def get_unique_serial_number(self):
+        # random_serial_number() gives unique values when everything is ok
+        # repeated s/n generation and check for accidental generation and/or OS issues
+        for i in range(42):
+            serial_number = x509.random_serial_number()
+
+            c = self.db.cursor()
+            c.execute('SELECT * FROM certs WHERE sn=?', (str(serial_number),))
+            if c.fetchone():
+                c.close()
+                logger.warning("random_serial_number() returns duplicated s/n")
+                continue
+
+            # if there is no cert with this S/N
+            c.close()
+            return serial_number
+
+        raise CAError("Could not get unique certificate s/n")
