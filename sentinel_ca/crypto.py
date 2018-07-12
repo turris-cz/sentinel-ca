@@ -154,7 +154,6 @@ def check_cert(cert, key):
     check_cert_basic_constraints(cert)
     check_cert_key_usage(cert)
     check_cert_subject_key_identifier(cert)
-    # TODO what if it expire soon?
     check_cert_valid_dates(cert)
 
 

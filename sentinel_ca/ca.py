@@ -58,13 +58,15 @@ class CA:
                 raise
 
 
-    def issue_cert(self, csr_str, identity):
+    def issue_cert(self, csr_str, identity, days=CERT_DAYS):
         csr = load_csr(csr_str)
         check_csr(csr, identity)
 
         serial_number = self.get_unique_serial_number()
         not_before = datetime.datetime.utcnow()
-        not_after = not_before + datetime.timedelta(days=CERT_DAYS)
+        not_after = not_before + datetime.timedelta(days=days)
+        # raise a CAError when CA cert will not be valid till not_after
+        self.check_cert_valid_at(not_after)
 
         cert = build_client_cert(
                 csr=csr,
@@ -79,6 +81,11 @@ class CA:
         store_cert(self.db, cert)
 
         return cert
+
+
+    def check_cert_valid_at(self, at):
+        if self.cert.not_valid_after < at:
+            raise CAError("CA cert will expire sooner than requested")
 
 
     def get_unique_serial_number(self):
