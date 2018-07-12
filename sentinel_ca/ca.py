@@ -19,7 +19,9 @@ SIGNING_HASH = hashes.SHA256()
 
 
 class CA:
-    def __init__(self, conf, ignore_errors=False):
+    def __init__(self, conf, db, ignore_errors=False):
+        self.db = db
+
         cert_path = conf.get("ca", "cert")
         key_path = conf.get("ca", "key")
         if conf.get("ca", "password"):
@@ -49,11 +51,11 @@ class CA:
                 raise
 
 
-    def issue_cert(self, db, csr_str, identity):
+    def issue_cert(self, csr_str, identity):
         csr = load_csr(csr_str)
         check_csr(csr, identity)
 
-        serial_number = get_unique_serial_number(db)
+        serial_number = get_unique_serial_number(self.db)
         not_before = datetime.datetime.utcnow()
         not_after = not_before + datetime.timedelta(days=CERT_DAYS)
 
@@ -67,6 +69,6 @@ class CA:
                 not_after=not_after,
         )
         cert = cert.sign(self.key, SIGNING_HASH, default_backend())
-        store_cert(db, cert)
+        store_cert(self.db, cert)
 
         return cert

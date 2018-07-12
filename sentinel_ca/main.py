@@ -16,7 +16,7 @@ from .sn import check_auth, config, init_sn
 logger = logging.getLogger("ca")
 
 
-def process(r, socket, db, ca):
+def process(r, socket, ca):
     try:
         request = get_request(r)
         check_request(request)
@@ -26,7 +26,7 @@ def process(r, socket, db, ca):
 
     try:
         check_auth(socket, request)
-        cert = ca.issue_cert(db, request["csr_str"], request["sn"])
+        cert = ca.issue_cert(request["csr_str"], request["sn"])
         logger.info(
                 "Certificate with s/n %d for %s was issued",
                 cert.serial_number,
@@ -46,9 +46,9 @@ def run():
     ctx, socket = init_sn()
     conf = config(ctx.args.config)
 
-    ca = CA(conf, ctx.args.ca_ignore_errors)
-    db = init_db(conf)
     r = init_redis(conf)
+    db = init_db(conf)
+    ca = CA(conf, db, ctx.args.ca_ignore_errors)
 
     while True:
-        process(r, socket, db, ca)
+        process(r, socket, ca)
