@@ -15,7 +15,7 @@ import sn
 
 from .exceptions import CAError, CASetupError
 from .crypto import *
-from .db import store_cert
+from .db import store_cert, row_with_serial_number
 
 logger = logging.getLogger("ca")
 
@@ -86,16 +86,9 @@ class CA:
         # repeated s/n generation and check for accidental generation and/or OS issues
         for i in range(42):
             serial_number = x509.random_serial_number()
-
-            c = self.db.cursor()
-            c.execute('SELECT * FROM certs WHERE sn=?', (str(serial_number),))
-            if c.fetchone():
-                c.close()
+            if row_with_serial_number(self.db, serial_number):
                 logger.warning("random_serial_number() returns duplicated s/n")
                 continue
-
-            # if there is no cert with this S/N
-            c.close()
             return serial_number
 
         raise CAError("Could not get unique certificate s/n")

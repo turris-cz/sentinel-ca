@@ -42,3 +42,11 @@ def store_cert(db, cert):
     )
     c.close()
     db.commit()
+
+
+def row_with_serial_number(db, serial_number):
+    c = db.cursor()
+    c.execute('SELECT * FROM certs WHERE sn=?', (str(serial_number),))
+    row = c.fetchone()
+    c.close()
+    return row
