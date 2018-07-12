@@ -24,13 +24,7 @@ def init():
     )
     socket = ctx.get_socket(("checker", "REQ"))
 
-    conf = config(ctx.args.config)
-
-    ca_cert, ca_key = init_ca(conf, ctx.args.ca_ignore_errors)
-    r = init_redis(conf)
-    db = init_db(conf)
-
-    return r, socket, db, ca_key, ca_cert
+    return ctx, socket
 
 
 def process(r, socket, db, ca_key, ca_cert):
@@ -62,6 +56,12 @@ def process(r, socket, db, ca_key, ca_cert):
 
 def run():
     logger.info("Sentinel:CA starts")
-    r, socket, db, ca_key, ca_cert = init()
+    ctx, socket = init()
+    conf = config(ctx.args.config)
+
+    ca_cert, ca_key = init_ca(conf, ctx.args.ca_ignore_errors)
+    db = init_db(conf)
+    r = init_redis(conf)
+
     while True:
         process(r, socket, db, ca_key, ca_cert)
