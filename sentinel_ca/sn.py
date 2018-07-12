@@ -4,6 +4,7 @@ Sentinel Network with arguments and config parser for Sentinel:CA
 
 import configparser
 import logging
+import zmq
 
 import sn
 
@@ -25,6 +26,16 @@ REQUIRED_AUTH_REPLY_KEYS = [
     "status",
     "message",
 ]
+
+
+def init_sn():
+    ctx = sn.SN(
+            zmq.Context.instance(),
+            get_argparser(sn.get_arg_parser())
+    )
+    socket = ctx.get_socket(("checker", "REQ"))
+
+    return ctx, socket
 
 
 def get_argparser(parser):
