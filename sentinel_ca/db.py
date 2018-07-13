@@ -6,7 +6,7 @@ import contextlib
 
 import sqlite3
 
-from .crypto import get_cert_bytes, get_cert_common_name
+from .crypto import cert_from_bytes, get_cert_bytes, get_cert_common_name
 from .exceptions import CASetupError
 
 
@@ -26,6 +26,26 @@ def init_db(conf):
         raise CASetupError("Incorrect DB scheme")
 
     return conn
+
+
+def get_cert(db, identity, date):
+    with contextlib.closing(db.cursor()) as c:
+        c.execute("""
+                SELECT cert
+                  FROM certs
+                  WHERE common_name = ? AND
+                        not_before <= ? AND
+                        ? <= not_after
+                  ORDER BY not_before DESC
+                  LIMIT 1
+                """,
+                (identity, date, date)
+        )
+        row = c.fetchone()
+        if not row:
+            return None
+
+        return cert_from_bytes(row[0])
 
 
 def store_cert(db, cert):

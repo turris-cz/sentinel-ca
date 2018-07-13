@@ -15,7 +15,7 @@ import sn
 
 from .exceptions import CAError, CASetupError
 from .crypto import *
-from .db import store_cert, row_with_serial_number
+from .db import get_cert, store_cert, row_with_serial_number
 
 logger = logging.getLogger("ca")
 
@@ -56,6 +56,11 @@ class CA:
             logger.error(str(e))
             if not ignore_errors:
                 raise
+
+
+    def get_valid_cert(self, identity):
+        now = datetime.datetime.utcnow()
+        return get_cert(self.db, identity, now)
 
 
     def issue_cert(self, csr_str, identity, days=CERT_DAYS):

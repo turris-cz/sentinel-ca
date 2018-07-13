@@ -105,6 +105,13 @@ def build_client_cert(csr, serial_number, subject, issuer, aki, not_before, not_
     return cert
 
 
+def cert_from_bytes(cert_bytes):
+    return x509.load_pem_x509_certificate(
+            data=cert_bytes,
+            backend=default_backend()
+    )
+
+
 def check_cert_private_key_match(cert, key):
     cert_key = cert.public_key()
     public_key = key.public_key()
