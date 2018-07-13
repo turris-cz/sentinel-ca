@@ -10,7 +10,7 @@ from .ca import CA
 from .crypto import get_cert_common_name
 from .db import init_db
 from .exceptions import CAParseError, CARequestError
-from .redis import init_redis, get_request, check_request, build_reply, build_error, send_reply, redis_cert_key
+from .redis import init_redis, get_request, check_request, set_cert, set_auth_ok, set_auth_failed
 from .sn import check_auth, config, init_sn
 
 logger = logging.getLogger("ca")
@@ -32,13 +32,13 @@ def process(r, socket, ca):
                 cert.serial_number,
                 get_cert_common_name(cert)
         )
-        reply = build_reply(cert)
+
+        set_cert(r, request["sn"], cert)
+        set_auth_ok(r, request["sn"], request["sid"])
+
     except CARequestError as e:
         logger.error("Invalid request: %s", str(e))
-        reply = build_error(str(e))
-
-    redis_key = redis_cert_key(request)
-    send_reply(r, redis_key, reply)
+        set_auth_failed(r, request["sn"], request["sid"], str(e))
 
 
 def run():

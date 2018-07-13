@@ -15,9 +15,8 @@ from .exceptions import CAParseError
 logger = logging.getLogger("ca")
 
 
-KEY_TTL = 2*60
-STATUS_KEYSPACE = "auth_state"
-CERT_KEYSPACE = "certificate"
+CERT_TTL = 30*60
+AUTH_TTL = 5*60
 
 QUEUE_NAME = "csr"
 REQUIRED_REQUEST_KEYS = [
@@ -61,8 +60,12 @@ def redis_item_to_dict(item):
         raise CAParseError("Invalid request format")
 
 
-def redis_cert_key(request):
-    return "{}:{}:{}".format(CERT_KEYSPACE, request["sn"], request["sid"])
+def auth_key(device_id, sid):
+    return "auth_state:{}:{}".format(device_id, sid)
+
+
+def cert_key(device_id):
+    return "certificate:{}".format(device_id)
 
 
 def check_request(request):
@@ -78,20 +81,27 @@ def get_request(r):
     return request
 
 
-def build_reply(cert):
-    return {
-        "cert": str(get_cert_bytes(cert), encoding='utf-8'),
-        "message": "",
+def set_auth_ok(r, device_id, sid):
+    key = auth_key(device_id, sid)
+    auth = {
+            "status": "ok",
     }
+    logger.debug("REDIS set %s: %s", key, auth)
+    r.set(key, json.dumps(auth), ex=AUTH_TTL)
 
 
-def build_error(message):
-    return {
-        "cert": "",
-        "message": message,
+def set_auth_failed(r, device_id, sid, message=""):
+    key = auth_key(device_id, sid)
+    auth = {
+            "status": "failed",
+            "message": message,
     }
+    logger.debug("REDIS set %s: %s", key, auth)
+    r.set(key, json.dumps(auth), ex=AUTH_TTL)
 
 
-def send_reply(r, key, reply):
-    logger.debug("REDIS set %s: %s", key, reply)
-    r.set(key, json.dumps(reply), ex=KEY_TTL)
+def set_cert(r, device_id, cert):
+    key = cert_key(device_id)
+    cert_bytes = get_cert_bytes(cert)
+    logger.debug("REDIS set %s: %s", key, cert_bytes)
+    r.set(key, cert_bytes, ex=CERT_TTL)
