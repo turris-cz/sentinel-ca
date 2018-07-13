@@ -27,8 +27,8 @@ from cryptography.hazmat.primitives import hashes
 
 CONFIG_DEFAULT_PATH = "cert-api.ini"
 
-SLEEP_MIN = 7
-SLEEP_MAX = 42
+SLEEP_MIN = 3
+SLEEP_MAX = 21
 
 RSA_BITS = 4096
 RSA_EXPONENT = 0x10001 # 65537
@@ -37,6 +37,7 @@ ECDSA_CURVE = ec.SECP256R1()
 AUTH_TYPE = "atsha"
 QUEUE_NAME = "csr"
 CERT_KEYSPACE = "certificate"
+AUTH_KEYSPACE = "auth_state"
 
 LOG_MESSAGE_MAPPER = {
     "incoming": "←",
@@ -100,8 +101,11 @@ def init_redis(conf):
     )
 
 
-def redis_item_to_json(item):
-    return str(item, encoding='utf-8').replace("'", '"')
+def redis_item_to_dict(item):
+    try:
+        return json.loads(str(item, encoding='utf-8'))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
 
 
 def log_message(message, direction="none", extra_line=False):
@@ -115,7 +119,7 @@ def print_redis_list(r):
     i = r.llen(QUEUE_NAME)
     if i:
         for item in r.lrange(QUEUE_NAME, 0, -1):
-            print("{}: {}".format(i-1, redis_item_to_json(item)))
+            print("{}: {}".format(i-1, redis_item_to_dict(item)))
             i-=1
     else:
         print("∅: <Empty queue>")
@@ -126,9 +130,20 @@ def print_redis_certs(r):
     i = 0
     for key in r.scan_iter(match="{}:*".format(CERT_KEYSPACE)):
         ttl = r.ttl(key)
-        print("{:3d}: {}".format(ttl, str(key, encoding='utf-8')))
+        print("{:4d}: {}".format(ttl, str(key, encoding='utf-8')))
         i += 1
     print("# of certificates: {}".format(i))
+    print("")
+
+
+def print_redis_auth(r):
+    i = 0
+    for key in r.scan_iter(match="{}:*".format(AUTH_KEYSPACE)):
+        auth = r.get(key)
+        ttl = r.ttl(key)
+        print("{:4d}: {} {}".format(ttl, str(key, encoding='utf-8'), redis_item_to_dict(auth)))
+        i += 1
+    print("# of auth states: {}".format(i))
     print("")
 
 
@@ -213,6 +228,8 @@ def main():
             print_redis_list(r)
             time.sleep(1)
             print_redis_certs(r)
+            time.sleep(1)
+            print_redis_auth(r)
 
         time.sleep(random.randint(SLEEP_MIN, SLEEP_MAX))
 
