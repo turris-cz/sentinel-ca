@@ -166,9 +166,12 @@ def gen_key(key_type="ecdsa", curve=ECDSA_CURVE, rsa_bits=RSA_BITS, rsa_exponent
 
 
 def gen_csr(device_id):
-    # 1 of 4 keys would be a RSA
-    key_type = random.choice(("ecdsa", "ecdsa", "ecdsa", "rsa"))
-    private_key = gen_key(key_type)
+    if random.choice((True, True, False)):
+        # 1 of 4 keys would be a RSA
+        key_type = random.choice(("ecdsa", "ecdsa", "ecdsa", "rsa"))
+        private_key = gen_key(key_type)
+    else:
+        private_key = GLOBAL_KEY
 
     subject = x509.Name([
             x509.NameAttribute(NameOID.COMMON_NAME, device_id),
@@ -180,12 +183,16 @@ def gen_csr(device_id):
 
 
 def build_request():
-    device_id = secrets.token_hex(8)
+    if random.choice((True, True, False)):
+        device_id = secrets.token_hex(8)
+    else:
+        device_id = "0042dead99beef11"
+
     sid = secrets.token_hex(16)
     nonce = secrets.token_hex(16)
     to_hash = "{}:{}".format(device_id, nonce)
 
-    if random.choice((True, False)):
+    if random.choice((True, True, False)):
         hash_digest = hashlib.sha256(bytes(to_hash, encoding='utf-8'))
     else:
         hash_digest = hashlib.sha1(bytes(to_hash, encoding='utf-8'))
@@ -232,6 +239,10 @@ def main():
             print_redis_auth(r)
 
         time.sleep(random.randint(SLEEP_MIN, SLEEP_MAX))
+
+
+# one common key for testing repetive queries
+GLOBAL_KEY = gen_key()
 
 
 if __name__ == "__main__":
