@@ -112,6 +112,20 @@ def cert_from_bytes(cert_bytes):
     )
 
 
+def csr_from_str(csr_str):
+    try:
+        # construct x509 request from PEM string
+        csr_data = bytes(csr_str, encoding='utf-8')
+        csr = x509.load_pem_x509_csr(
+                data=csr_data,
+                backend=default_backend()
+        )
+    except (UnicodeEncodeError, ValueError):
+        raise CARequestError("Invalid CSR format")
+
+    return csr
+
+
 def check_cert_private_key_match(cert, key):
     cert_key = cert.public_key()
     public_key = key.public_key()
@@ -208,17 +222,3 @@ def get_cert_common_name(cert):
 
 def key_match(csr, cert):
     return cert.public_key().public_numbers() == csr.public_key().public_numbers()
-
-
-def load_csr(csr_str):
-    try:
-        # construct x509 request from PEM string
-        csr_data = bytes(csr_str, encoding='utf-8')
-        csr = x509.load_pem_x509_csr(
-                data=csr_data,
-                backend=default_backend()
-        )
-    except (UnicodeEncodeError, ValueError):
-        raise CARequestError("Invalid CSR format")
-
-    return csr

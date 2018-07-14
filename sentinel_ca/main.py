@@ -7,7 +7,7 @@ import logging
 import sn
 
 from .ca import CA
-from .crypto import check_csr, load_csr
+from .crypto import check_csr, csr_from_str
 from .db import init_db
 from .exceptions import CAParseError, CARequestError
 from .redis import init_redis, get_request, check_request, set_cert, set_auth_ok, set_auth_failed
@@ -26,7 +26,7 @@ def process(r, socket, ca):
 
     try:
         # if anything fails, CARequestError is risen
-        csr = load_csr(request["csr_str"])
+        csr = csr_from_str(request["csr_str"])
         check_csr(csr, request["sn"])
         check_auth(socket, request)
 
