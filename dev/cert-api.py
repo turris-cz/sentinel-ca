@@ -116,13 +116,12 @@ def log_message(message, direction="none", extra_line=False):
 
 
 def print_redis_list(r):
-    i = r.llen(QUEUE_NAME)
-    if i:
-        for item in r.lrange(QUEUE_NAME, 0, -1):
-            print("{}: {}".format(i-1, redis_item_to_dict(item)))
-            i-=1
-    else:
-        print("∅: <Empty queue>")
+    llen = r.llen(QUEUE_NAME)
+    i = llen
+    for item in r.lrange(QUEUE_NAME, 0, -1):
+        print("{}: {}".format(i-1, redis_item_to_dict(item)))
+        i-=1
+    print("# of items in queue: {}".format(llen))
     print("")
 
 
