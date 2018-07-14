@@ -7,6 +7,7 @@ import logging
 import sn
 
 from .ca import CA
+from .crypto import check_csr, key_match, load_csr
 from .db import init_db
 from .exceptions import CAParseError, CARequestError
 from .redis import init_redis, get_request, check_request, set_cert, set_auth_ok, set_auth_failed
@@ -25,12 +26,15 @@ def process(r, socket, ca):
 
     try:
         # if anything fails, CARequestError is risen
+        csr = load_csr(request["csr_str"])
+        check_csr(csr, request["sn"])
         check_auth(socket, request)
+
         cert = ca.get_valid_cert(request["sn"])
-        if cert:
+        if cert and key_match(csr, cert):
             logger.info("Certificate for %s is served", request["sn"])
         else:
-            cert = ca.issue_cert(request["csr_str"], request["sn"])
+            cert = ca.issue_cert(csr, request["sn"])
             logger.info(
                     "Certificate with s/n %d for %s was issued",
                     cert.serial_number,

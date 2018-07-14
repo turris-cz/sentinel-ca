@@ -206,6 +206,10 @@ def get_cert_common_name(cert):
     return common_name
 
 
+def key_match(csr, cert):
+    return cert.public_key().public_numbers() == csr.public_key().public_numbers()
+
+
 def load_csr(csr_str):
     try:
         # construct x509 request from PEM string

@@ -63,10 +63,7 @@ class CA:
         return get_cert(self.db, identity, now)
 
 
-    def issue_cert(self, csr_str, identity, days=CERT_DAYS):
-        csr = load_csr(csr_str)
-        check_csr(csr, identity)
-
+    def issue_cert(self, csr, identity, days=CERT_DAYS):
         serial_number = self.get_unique_serial_number()
         not_before = datetime.datetime.utcnow()
         not_after = not_before + datetime.timedelta(days=days)
