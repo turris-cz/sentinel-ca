@@ -39,10 +39,12 @@ def process(r, socket, ca):
 
         if cert:
             # restore the cert if valid one is found
+            message = "Old certificate was served"
             logger.info("Certificate for %s is served", request["sn"])
         else:
             # issue a new cert when none is found or renew is requested
             cert = ca.issue_cert(csr, request["sn"])
+            message = "Certificate was issued"
             logger.info(
                     "Certificate with s/n %d for %s was issued",
                     cert.serial_number,
@@ -50,7 +52,7 @@ def process(r, socket, ca):
             )
 
         set_cert(r, request["sn"], cert)
-        set_auth_ok(r, request["sn"], request["sid"])
+        set_auth_ok(r, request["sn"], request["sid"], message)
 
     except CARequestError as e:
         logger.error("Invalid request: %s", str(e))

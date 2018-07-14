@@ -82,10 +82,11 @@ def get_request(r):
     return request
 
 
-def set_auth_ok(r, device_id, sid):
+def set_auth_ok(r, device_id, sid, message=""):
     key = auth_key(device_id, sid)
     auth = {
             "status": "ok",
+            "message": message,
     }
     logger.debug("REDIS set %s: %s", key, auth)
     r.set(key, json.dumps(auth), ex=AUTH_TTL)
