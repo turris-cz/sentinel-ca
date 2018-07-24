@@ -30,10 +30,18 @@ def process(r, socket, ca):
         check_csr(csr, request["sn"])
         check_auth(socket, request)
 
-        cert = ca.get_valid_cert_matching_csr(request["sn"], csr)
+        # do not look for a valid certificate if the renew flag is present
+        if "renew" in request["flags"]:
+            logger.debug("The request forced certificate renew")
+            cert = None
+        else:
+            cert = ca.get_valid_cert_matching_csr(request["sn"], csr)
+
         if cert:
+            # restore the cert if valid one is found
             logger.info("Certificate for %s is served", request["sn"])
         else:
+            # issue a new cert when none is found or renew is requested
             cert = ca.issue_cert(csr, request["sn"])
             logger.info(
                     "Certificate with s/n %d for %s was issued",

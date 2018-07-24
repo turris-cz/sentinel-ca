@@ -26,6 +26,7 @@ REQUIRED_REQUEST_KEYS = [
     "nonce",
     "digest",
     "csr_str",
+    "flags",
 ]
 
 
