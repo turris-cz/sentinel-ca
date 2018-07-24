@@ -15,7 +15,7 @@ import sn
 
 from .exceptions import CAError, CASetupError
 from .crypto import *
-from .db import get_cert, store_cert, row_with_serial_number
+from .db import get_certs, store_cert, row_with_serial_number
 
 logger = logging.getLogger("ca")
 
@@ -58,9 +58,12 @@ class CA:
                 raise
 
 
-    def get_valid_cert(self, identity):
+    def get_valid_cert_matching_csr(self, identity, csr):
         now = datetime.datetime.utcnow()
-        return get_cert(self.db, identity, now)
+        for cert in get_certs(self.db, identity, now):
+            if key_match(cert, csr):
+                return cert
+        return None
 
 
     def issue_cert(self, csr, identity, days=CERT_DAYS):

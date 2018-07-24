@@ -28,7 +28,7 @@ def init_db(conf):
     return conn
 
 
-def get_cert(db, identity, date):
+def get_certs(db, identity, date):
     with contextlib.closing(db.cursor()) as c:
         c.execute("""
                 SELECT cert
@@ -37,15 +37,12 @@ def get_cert(db, identity, date):
                         not_before <= ? AND
                         ? <= not_after
                   ORDER BY not_before DESC
-                  LIMIT 1
                 """,
                 (identity, date, date)
         )
-        row = c.fetchone()
-        if not row:
-            return None
 
-        return cert_from_bytes(row[0])
+        for row in c:
+            yield cert_from_bytes(row[0])
 
 
 def store_cert(db, cert):
