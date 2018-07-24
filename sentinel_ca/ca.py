@@ -20,7 +20,10 @@ from .db import get_certs, store_cert, row_with_serial_number
 logger = logging.getLogger("ca")
 
 
-CERT_DAYS = 30
+# default certificate validity
+CERT_DAYS = 60
+# 25% before end of validity
+VALID_DAYS = int(0.25*CERT_DAYS)
 # The HashAlgorithm instance used to sign the certificates
 SIGNING_HASH = hashes.SHA256()
 
@@ -58,9 +61,9 @@ class CA:
                 raise
 
 
-    def get_valid_cert_matching_csr(self, identity, csr):
-        now = datetime.datetime.utcnow()
-        for cert in get_certs(self.db, identity, now):
+    def get_valid_cert_matching_csr(self, identity, csr, days=VALID_DAYS):
+        date = datetime.datetime.utcnow() + datetime.timedelta(days=days)
+        for cert in get_certs(self.db, identity, date):
             if key_match(cert, csr):
                 return cert
         return None
