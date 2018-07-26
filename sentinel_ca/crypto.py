@@ -22,10 +22,10 @@ logger = logging.getLogger("ca")
 
 
 ALLOWED_HASHES = {
-    hashes.SHA224,
-    hashes.SHA256,
-    hashes.SHA384,
-    hashes.SHA512,
+    "sha224",
+    "sha256",
+    "sha384",
+    "sha512",
 }
 
 
@@ -189,9 +189,9 @@ def check_csr_common_name(csr, identity):
 
 
 def check_csr_hash(csr):
-    h = csr.signature_hash_algorithm
-    if type(h) not in ALLOWED_HASHES:
-        raise CARequestError("CSR is signed with not allowed hash ({})".format(h.name))
+    h = csr.signature_hash_algorithm.name
+    if h not in ALLOWED_HASHES:
+        raise CARequestError("CSR is signed with not allowed hash ({})".format(h))
 
 
 def check_csr_signature(csr):
