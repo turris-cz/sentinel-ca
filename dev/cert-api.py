@@ -202,6 +202,11 @@ def build_request():
     else:
         subject = secrets.token_hex(8)
 
+    if random.choice((True, False)):
+        flags = ("renew",)
+    else:
+        flags = ()
+
     csr = str(gen_csr(subject), encoding='utf-8')
 
     request = {
@@ -211,6 +216,7 @@ def build_request():
             "nonce": nonce,
             "digest": digest,
             "csr_str": csr,
+            "flags": flags,
     }
 
     return request
