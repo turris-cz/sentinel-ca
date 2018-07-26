@@ -1,0 +1,13 @@
+## ca.ini
+#
+
+[redis]
+host = localhost
+password = l33thax0r
+
+[db]
+path = ca_x4.db
+
+[ca]
+cert = cert_ca-x4.pem
+key = key_ca-x4.pem

@@ -11,3 +11,6 @@ __pycache__
 
 # Pytest
 .pytest_cache/
+
+# Ignore ca config files
+/ca.ini
