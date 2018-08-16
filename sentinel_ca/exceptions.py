@@ -11,5 +11,8 @@ class CASetupError(CAError):
 class CAParseError(CAError):
     pass
 
-class CARequestError(CAError):
+class CARequestClientError(CAError):
+    pass
+
+class CARequestServerError(CAError):
     pass

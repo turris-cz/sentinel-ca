@@ -9,8 +9,8 @@ import sn
 from .ca import CA
 from .crypto import check_csr, csr_from_str
 from .db import init_db
-from .exceptions import CAParseError, CARequestError
-from .redis import init_redis, get_request, check_request, set_cert, set_auth_ok, set_auth_fail
+from .exceptions import CAParseError, CARequestClientError, CARequestServerError
+from .redis import init_redis, get_request, check_request, set_cert, set_auth_ok, set_auth_fail, set_auth_error
 from .sn import check_auth, config, init_sn
 
 logger = logging.getLogger("ca")
@@ -25,7 +25,7 @@ def process(r, socket, ca):
         return
 
     try:
-        # if anything fails, CARequestError is risen
+        # if anything fails, CARequestServerError is risen
         csr = csr_from_str(request["csr_str"])
         check_csr(csr, request["sn"])
         check_auth(socket, request)
@@ -54,9 +54,13 @@ def process(r, socket, ca):
         set_cert(r, request["sn"], cert)
         set_auth_ok(r, request["sn"], request["sid"], message)
 
-    except CARequestError as e:
-        logger.error("Invalid request: %s", str(e))
+    except CARequestClientError as e:
+        logger.warning("Failed request: %s", str(e))
         set_auth_fail(r, request["sn"], request["sid"], str(e))
+
+    except CARequestServerError as e:
+        logger.error("Invalid request: %s", str(e))
+        set_auth_error(r, request["sn"], request["sid"], str(e))
 
 
 def run():

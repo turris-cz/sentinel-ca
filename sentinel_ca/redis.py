@@ -100,6 +100,10 @@ def set_auth_fail(r, device_id, sid, message=""):
     set_auth(r, device_id, sid, "fail", message)
 
 
+def set_auth_error(r, device_id, sid, message=""):
+    set_auth(r, device_id, sid, "error", message)
+
+
 def set_cert(r, device_id, cert):
     key = cert_key(device_id)
     cert_bytes = get_cert_bytes(cert)

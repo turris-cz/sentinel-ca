@@ -11,7 +11,7 @@ import zmq
 
 import sn
 
-from .exceptions import CAParseError, CARequestError
+from .exceptions import CAParseError, CARequestClientError, CARequestServerError
 
 logger = logging.getLogger("ca")
 
@@ -90,12 +90,12 @@ def config(config_path):
 def check_auth_reply(msg_type, message):
     # check message type
     if msg_type != MESSAGE_TYPE:
-        raise CARequestError("Unknown message type in auth reply '{}'".format(msg_type))
+        raise CARequestServerError("Unknown message type in auth reply '{}'".format(msg_type))
 
     # check presence of needed keys
     for key in REQUIRED_AUTH_REPLY_KEYS:
         if key not in message:
-            raise CARequestError("'{}' is missing in the auth reply".format(key))
+            raise CARequestServerError("'{}' is missing in the auth reply".format(key))
 
 
 def check_auth(socket, request):
@@ -108,5 +108,8 @@ def check_auth(socket, request):
     logger.debug("ZMQ recv %s: %s", msg_type, auth_reply)
 
     check_auth_reply(msg_type, auth_reply)
+    # distinguish fail and other not-ok state
+    if auth_reply["status"] == "fail":
+        raise CARequestClientError(auth_reply["message"])
     if auth_reply["status"] != "ok":
-        raise CARequestError(auth_reply["message"])
+        raise CARequestServerError(auth_reply["message"])

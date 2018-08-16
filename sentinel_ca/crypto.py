@@ -16,7 +16,7 @@ from cryptography import x509
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 from cryptography.hazmat.primitives import hashes
 
-from .exceptions import CAError, CASetupError, CARequestError
+from .exceptions import CASetupError, CARequestClientError
 
 logger = logging.getLogger("ca")
 
@@ -121,7 +121,7 @@ def csr_from_str(csr_str):
                 backend=default_backend()
         )
     except (UnicodeEncodeError, ValueError):
-        raise CARequestError("Invalid CSR format")
+        raise CARequestClientError("Invalid CSR format")
 
     return csr
 
@@ -181,22 +181,22 @@ def check_cert(cert, key):
 def check_csr_common_name(csr, identity):
     common_names = csr.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)
     if len(common_names) != 1:
-        raise CARequestError("CSR has not exactly one CommonName")
+        raise CARequestClientError("CSR has not exactly one CommonName")
 
     common_name = common_names[0].value
     if common_name != identity:
-        raise CARequestError("CSR CommonName ({}) does not match desired identity".format(common_name))
+        raise CARequestClientError("CSR CommonName ({}) does not match desired identity".format(common_name))
 
 
 def check_csr_hash(csr):
     h = csr.signature_hash_algorithm.name
     if h not in ALLOWED_HASHES:
-        raise CARequestError("CSR is signed with not allowed hash ({})".format(h))
+        raise CARequestClientError("CSR is signed with not allowed hash ({})".format(h))
 
 
 def check_csr_signature(csr):
     if not csr.is_signature_valid:
-        raise CARequestError("Request signature is not valid")
+        raise CARequestClientError("Request signature is not valid")
 
 
 def check_csr(csr, device_id):
