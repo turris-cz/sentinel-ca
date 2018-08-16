@@ -2,8 +2,11 @@
 Sentinel Network with arguments and config parser for Sentinel:CA
 """
 
+from errno import ENOENT
 import configparser
 import logging
+import os
+
 import zmq
 
 import sn
@@ -79,7 +82,7 @@ def config(config_path):
     conf = prepare_config()
     res = conf.read(config_path)
     if config_path not in res:
-        raise FileNotFoundError()
+        raise FileNotFoundError(ENOENT, os.strerror(ENOENT), config_path)
 
     return conf
 
