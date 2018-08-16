@@ -82,24 +82,22 @@ def get_request(r):
     return request
 
 
-def set_auth_ok(r, device_id, sid, message=""):
+def set_auth(r, device_id, sid, status, message):
     key = auth_key(device_id, sid)
     auth = {
-            "status": "ok",
+            "status": status,
             "message": message,
     }
     logger.debug("REDIS set %s: %s", key, auth)
     r.set(key, json.dumps(auth), ex=AUTH_TTL)
+
+
+def set_auth_ok(r, device_id, sid, message=""):
+    set_auth(r, device_id, sid, "ok", message)
 
 
 def set_auth_failed(r, device_id, sid, message=""):
-    key = auth_key(device_id, sid)
-    auth = {
-            "status": "failed",
-            "message": message,
-    }
-    logger.debug("REDIS set %s: %s", key, auth)
-    r.set(key, json.dumps(auth), ex=AUTH_TTL)
+    set_auth(r, device_id, sid, "failed", message)
 
 
 def set_cert(r, device_id, cert):
