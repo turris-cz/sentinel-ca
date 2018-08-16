@@ -10,7 +10,7 @@ from .ca import CA
 from .crypto import check_csr, csr_from_str
 from .db import init_db
 from .exceptions import CAParseError, CARequestError
-from .redis import init_redis, get_request, check_request, set_cert, set_auth_ok, set_auth_failed
+from .redis import init_redis, get_request, check_request, set_cert, set_auth_ok, set_auth_fail
 from .sn import check_auth, config, init_sn
 
 logger = logging.getLogger("ca")
@@ -56,7 +56,7 @@ def process(r, socket, ca):
 
     except CARequestError as e:
         logger.error("Invalid request: %s", str(e))
-        set_auth_failed(r, request["sn"], request["sid"], str(e))
+        set_auth_fail(r, request["sn"], request["sid"], str(e))
 
 
 def run():

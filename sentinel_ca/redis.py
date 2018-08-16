@@ -96,8 +96,8 @@ def set_auth_ok(r, device_id, sid, message=""):
     set_auth(r, device_id, sid, "ok", message)
 
 
-def set_auth_failed(r, device_id, sid, message=""):
-    set_auth(r, device_id, sid, "failed", message)
+def set_auth_fail(r, device_id, sid, message=""):
+    set_auth(r, device_id, sid, "fail", message)
 
 
 def set_cert(r, device_id, cert):
