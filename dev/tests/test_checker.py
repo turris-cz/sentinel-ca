@@ -40,7 +40,7 @@ def test_normal_processing():
 def test_bad_msg_type():
     reply = checker.process("sentinel/ca",  msg_payload("foo"))
 
-    assert reply["status"] == "failed"
+    assert reply["status"] == "error"
     assert "Unknown message type" in reply["message"]
 
 
@@ -50,7 +50,7 @@ def test_missing_msg_part():
 
     reply = checker.process(MESSAGE_TYPE, p)
 
-    assert reply["status"] == "failed"
+    assert reply["status"] == "error"
     assert "missing in the message" in reply["message"]
 
 
@@ -58,5 +58,5 @@ def test_bad_digest():
     reply = checker.process(MESSAGE_TYPE, msg_payload("foo", good_digest=False))
     print(reply)
 
-    assert reply["status"] == "failed"
+    assert reply["status"] == "fail"
     assert "Provided digest is not valid" in reply["message"]

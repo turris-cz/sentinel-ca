@@ -24,7 +24,11 @@ LOG_MESSAGE_MAPPER = {
 }
 
 
-class CheckerError(Exception):
+class CheckerClientError(Exception):
+    pass
+
+
+class CheckerServerError(Exception):
     pass
 
 
@@ -47,19 +51,19 @@ def log_message(msg_type, message, direction="none", extra_line=False):
 def check_message(msg_type, message):
     # check message type
     if msg_type != MESSAGE_TYPE:
-        raise CheckerError("Unknown message type '{}'".format(msg_type))
+        raise CheckerServerError("Unknown message type '{}'".format(msg_type))
 
     # check presence of needed keys
     for key in REQUIRED_KEYS:
         if key not in message:
-            raise CheckerError("'{}' is missing in the message".format(key))
+            raise CheckerServerError("'{}' is missing in the message".format(key))
 
 
 def process_message(device_id, nonce, digest):
     to_hash = "{}:{}".format(device_id, nonce)
     hash_digest = hashlib.sha256(bytes(to_hash, encoding='utf-8'))
     if digest != hash_digest.hexdigest():
-        raise CheckerError("Provided digest is not valid")
+        raise CheckerClientError("Provided digest is not valid")
 
 
 def build_reply(status, message=""):
@@ -74,8 +78,10 @@ def process(msg_type, message):
         check_message(msg_type, message)
         process_message(message["sn"], message["nonce"], message["digest"])
         return build_reply("ok")
-    except CheckerError as e:
-        return build_reply("failed", str(e))
+    except CheckerClientError as e:
+        return build_reply("fail", str(e))
+    except CheckerServerError as e:
+        return build_reply("error", str(e))
 
 
 def main():
