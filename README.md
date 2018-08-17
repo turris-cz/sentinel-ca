@@ -1,5 +1,8 @@
 # Sentinel:CA
 
+![pipeline status](https://gitlab.labs.nic.cz/turris/sentinel/ca/badges/master/pipeline.svg)
+![coverage report](https://gitlab.labs.nic.cz/turris/sentinel/ca/badges/master/coverage.svg)
+
 A *Certifiator* component
 
 Automated certification authority to issue certificates for authenticated
