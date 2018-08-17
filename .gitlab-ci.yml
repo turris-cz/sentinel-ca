@@ -1,0 +1,31 @@
+image: registry.labs.nic.cz/turris/sentinel/sn
+
+stages:
+  - test
+  - coverage_report
+
+before_script:
+  - service rsyslog start
+  - pip3 install git+https://gitlab.labs.nic.cz/turris/sentinel/sn@master#egg=sn
+  - pip3 install git+https://gitlab.labs.nic.cz/turris/sentinel/sn@master#egg=sn[tests]
+  - pip3 install cryptography
+  - pip3 install redis
+
+run_tests:
+  stage: test
+  script:
+    - python3 -m pytest -v tests
+
+coverage_report:
+  stage: coverage_report
+  script:
+    - rm -rf public
+    - mkdir public
+    - python3 -m coverage run -m pytest -v tests
+    - coverage html --directory public --omit='*dist-packages*','tests/*'
+    - coverage report --omit='*dist-packages*','tests/*'
+  artifacts:
+    when: on_success
+    paths:
+      - public
+  coverage: '/^TOTAL.* (\d+)%$/'
