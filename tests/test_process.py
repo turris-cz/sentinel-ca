@@ -4,6 +4,8 @@ Test whole CA processing a request
 
 import json
 
+import pytest
+
 import sn
 from sentinel_ca.main import process
 
@@ -83,32 +85,18 @@ def test_process_good_request(redis_mock, socket_mock, ca):
     assert ca.get_valid_cert_matching_csr(req["sn"], csr)
 
 
-def test_process_fail_request(redis_mock, socket_mock, ca):
-    # prepare env
-    request = build_good_request()
-    redis_mock.brpop.return_value = (1, dict_to_bytes(request))
-    socket_mock.recv_multipart.return_value = checker_fail_reply()
-
-    # test
-    process(redis_mock, socket_mock, ca)
-
-    # Check redis interaction
-    assert redis_mock.set.call_count == 1
-    # auth_state
-    auth_state = bytes_to_dict(redis_mock.set.call_args_list[0][0][1])
-    assert auth_state["status"] == "fail"
-    assert auth_state["message"] == "Auth error happened"
-
-    # Check certs in sqlite
-    csr = csr_from_str(request["csr_str"])
-    assert not ca.get_valid_cert_matching_csr(request["sn"], csr)
-
-
-def test_process_error_request(redis_mock, socket_mock, ca):
+@pytest.mark.parametrize(
+        "param",
+        (
+            {"reply": checker_fail_reply(), "status": "fail"},
+            {"reply": checker_error_reply(), "status": "error"},
+        )
+)
+def test_process_bad_reply(redis_mock, socket_mock, ca, param):
     # prepare env
     req = build_good_request()
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
-    socket_mock.recv_multipart.return_value = checker_error_reply()
+    socket_mock.recv_multipart.return_value = param["reply"]
 
     # test
     process(redis_mock, socket_mock, ca)
@@ -120,7 +108,7 @@ def test_process_error_request(redis_mock, socket_mock, ca):
     assert redis_mock.set.call_count == 1
     # auth_state
     auth_state = bytes_to_dict(redis_mock.set.call_args_list[0][0][1])
-    assert auth_state["status"] == "error"
+    assert auth_state["status"] == param["status"]
 
     # Check certs in sqlite
     csr = csr_from_str(req["csr_str"])
