@@ -38,9 +38,8 @@ def socket_mock():
 
 
 @pytest.fixture
-def db(tmpdir):
-    db_path = tmpdir.join("ca.db")
-    with sqlite3.connect(str(db_path)) as conn:
+def db():
+    with sqlite3.connect(':memory:') as conn:
         with contextlib.closing(conn.cursor()) as c:
             with open("scheme.sql") as scheme:
                 c.executescript(scheme.read())
