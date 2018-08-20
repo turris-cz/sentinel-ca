@@ -50,6 +50,25 @@ def checker_error_reply():
     )
 
 
+def checker_bad_reply1():
+    return sn.encode_msg(
+            "sentinel/certificator/foo",
+            {
+                "status": "ok",
+                "message": "Interface malformed: Wrong message type",
+            }
+    )
+
+
+def checker_bad_reply2():
+    return sn.encode_msg(
+            "sentinel/certificator/checker",
+            {
+                "message": "Interface malformed: Status is missing",
+            }
+    )
+
+
 def test_process_good_request(redis_mock, socket_mock, ca):
     # prepare env
     req = build_good_request()
@@ -90,6 +109,8 @@ def test_process_good_request(redis_mock, socket_mock, ca):
         (
             {"reply": checker_fail_reply(), "status": "fail"},
             {"reply": checker_error_reply(), "status": "error"},
+            {"reply": checker_bad_reply1(), "status": "error"},
+            {"reply": checker_bad_reply2(), "status": "error"},
         )
 )
 def test_process_bad_reply(redis_mock, socket_mock, ca, param):
