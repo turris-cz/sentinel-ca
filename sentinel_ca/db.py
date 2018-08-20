@@ -3,7 +3,6 @@ Data storage wrappers for Sentinel:CA
 """
 
 import contextlib
-
 import sqlite3
 
 from .crypto import cert_from_bytes, get_cert_bytes, get_cert_common_name
