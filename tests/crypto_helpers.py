@@ -55,7 +55,7 @@ def gen_csr(device_id):
     csr = x509.CertificateSigningRequestBuilder(subject_name=subject)
     csr = csr.sign(private_key, hashes.SHA256(), default_backend())
 
-    return csr.public_bytes(serialization.Encoding.PEM)
+    return csr
 
 
 def gen_cacert(private_key, common_name="Fake Sentinel:CA for pytest"):
@@ -116,7 +116,7 @@ def gen_cacert(private_key, common_name="Fake Sentinel:CA for pytest"):
     return cert
 
 
-def build_good_request():
+def build_request():
     device_id = os.urandom(8).hex()
     sid = os.urandom(16).hex()
     nonce = os.urandom(16).hex()
@@ -126,7 +126,7 @@ def build_good_request():
     hash_digest = hashlib.sha256(bytes(to_hash, encoding='utf-8'))
     digest = hash_digest.hexdigest()
 
-    csr = str(gen_csr(device_id), encoding='utf-8')
+    csr = csr_to_str(gen_csr(device_id))
 
     req = {
             "sn": device_id,
@@ -141,6 +141,10 @@ def build_good_request():
     return req
 
 
+def good_request():
+    return build_request()
+
+
 def cert_from_bytes(cert_bytes):
     return x509.load_pem_x509_certificate(
             data=cert_bytes,
@@ -150,6 +154,10 @@ def cert_from_bytes(cert_bytes):
 
 def get_cert_common_name(cert):
     return cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+
+
+def csr_to_str(csr):
+    return str(csr.public_bytes(serialization.Encoding.PEM), encoding='utf-8')
 
 
 def csr_from_str(csr_str):

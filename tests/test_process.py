@@ -9,7 +9,7 @@ import pytest
 import sn
 from sentinel_ca.main import process
 
-from .crypto_helpers import build_good_request, cert_from_bytes, get_cert_common_name, csr_from_str
+from .crypto_helpers import good_request, cert_from_bytes, get_cert_common_name, csr_from_str
 
 
 def dict_to_bytes(d):
@@ -57,7 +57,7 @@ def checker_bad_reply2():
 
 def test_process_good_request(redis_mock, socket_mock, ca):
     # prepare env
-    req = build_good_request()
+    req = good_request()
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
     socket_mock.recv_multipart.return_value = checker_good_reply()
 
@@ -101,7 +101,7 @@ def test_process_good_request(redis_mock, socket_mock, ca):
 )
 def test_process_bad_reply(redis_mock, socket_mock, ca, param):
     # prepare env
-    req = build_good_request()
+    req = good_request()
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
     socket_mock.recv_multipart.return_value = param["reply"]
 
