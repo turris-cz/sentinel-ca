@@ -14,3 +14,5 @@ __pycache__
 
 # Ignore ca config files
 /ca.ini
+# Ignore ca default database
+/ca.db
