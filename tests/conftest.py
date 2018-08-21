@@ -10,6 +10,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from sentinel_ca.db import db_connection
 from sentinel_ca.ca import CA
 from sentinel_ca.sn import prepare_config
 
@@ -37,20 +38,19 @@ def socket_mock():
 
 
 
-@pytest.fixture
-def db():
-    with sqlite3.connect(':memory:') as conn:
+def prepare_db(db_path):
+    with sqlite3.connect(db_path) as conn:
         with contextlib.closing(conn.cursor()) as c:
             with open("scheme.sql") as scheme:
                 c.executescript(scheme.read())
         conn.commit()
-        yield conn
 
 
 @pytest.fixture
 def ca_config(tmpdir):
     key_path = tmpdir.join("key.pem")
     cert_path = tmpdir.join("cert.pem")
+    db_path = tmpdir.join("ca.db")
 
     key = gen_key()
     cert = gen_cacert(key)
@@ -58,15 +58,19 @@ def ca_config(tmpdir):
     key_path.write(key_to_bytes(key))
     cert_path.write(cert_to_bytes(cert))
 
+    prepare_db(str(db_path))
+
     # apply sentinel_ca config defaults
     conf = prepare_config()
     # use generated key, cert and db
     conf.set("ca", "cert", str(cert_path))
     conf.set("ca", "key", str(key_path))
+    conf.set("db", "path", str(db_path))
 
     return conf
 
 
 @pytest.fixture
-def ca(ca_config, db):
-    return CA(ca_config, db)
+def ca(ca_config):
+    with db_connection(ca_config) as db:
+        yield CA(ca_config, db)
