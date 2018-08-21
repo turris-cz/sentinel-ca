@@ -9,7 +9,14 @@ import pytest
 import sn
 from sentinel_ca.main import process
 
-from .crypto_helpers import good_request, cert_from_bytes, get_cert_common_name, csr_from_str
+from .crypto_helpers import \
+        bad_request_empty, \
+        bad_request_missing, \
+        bad_request_invalid_csr, \
+        good_request, \
+        cert_from_bytes, \
+        csr_from_str, \
+        get_cert_common_name
 
 
 def dict_to_bytes(d):
@@ -88,6 +95,54 @@ def test_process_good_request(redis_mock, socket_mock, ca):
     # Check certs in sqlite
     csr = csr_from_str(req["csr_str"])
     assert ca.get_valid_cert_matching_csr(req["sn"], csr)
+
+
+def test_process_empty_redis(redis_mock, socket_mock, ca):
+    # prepare env
+    redis_mock.brpop.return_value = None
+    socket_mock.recv_multipart.return_value = checker_good_reply()
+
+    # test
+    process(redis_mock, socket_mock, ca)
+
+    # Check SN interaction
+    assert not socket_mock.send_multipart.called
+    # Check redis interaction
+    assert not redis_mock.set.called
+
+
+def test_process_bad_request_empty(redis_mock, socket_mock, ca):
+    # prepare env
+    req = bad_request_empty()
+    redis_mock.brpop.return_value = (1, dict_to_bytes(req))
+    socket_mock.recv_multipart.return_value = checker_good_reply()
+
+    # test
+    process(redis_mock, socket_mock, ca)
+
+    # Check SN interaction
+    assert not socket_mock.send_multipart.called
+    # Check redis interaction
+    assert not redis_mock.set.called
+
+
+@pytest.mark.parametrize("req", bad_request_missing())
+def test_process_bad_request_missing(redis_mock, socket_mock, ca, req):
+    # prepare env
+    redis_mock.brpop.return_value = (1, dict_to_bytes(req))
+    socket_mock.recv_multipart.return_value = checker_good_reply()
+
+    # test
+    process(redis_mock, socket_mock, ca)
+
+    # Check SN interaction
+    assert not socket_mock.send_multipart.called
+    # Check redis interaction
+    assert not redis_mock.set.called
+
+    if "csr_str" in req and "sn" in req:
+        csr = csr_from_str(req["csr_str"])
+        assert not ca.get_valid_cert_matching_csr(req["sn"], csr)
 
 
 @pytest.mark.parametrize(
