@@ -54,11 +54,16 @@ def get_redis_item(r, queue, timeout=0):
 
 def redis_item_to_dict(item):
     try:
-        return json.loads(str(item, encoding='utf-8'))
+        d = json.loads(str(item, encoding='utf-8'))
+        if d is None:
+            raise CAParseError("Empty request")
+
     except (UnicodeDecodeError, json.JSONDecodeError) as e:
         # when item is not a UTF-8 json
         logger.exception(e)
         raise CAParseError("Invalid request format")
+
+    return d
 
 
 def auth_key(device_id, sid):
