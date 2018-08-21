@@ -8,7 +8,7 @@ import sn
 
 from .ca import CA
 from .crypto import check_csr, csr_from_str
-from .db import init_db
+from .db import db_connection
 from .exceptions import CAParseError, CARequestClientError, CARequestServerError
 from .redis import init_redis, get_request, check_request, set_cert, set_auth_ok, set_auth_fail, set_auth_error
 from .sn import check_auth, config, init_sn
@@ -69,8 +69,9 @@ def run():
     conf = config(ctx.args.config)
 
     r = init_redis(conf)
-    db = init_db(conf)
-    ca = CA(conf, db, ctx.args.ca_ignore_errors)
 
-    while True:
-        process(r, socket, ca)
+    with db_connection(conf) as db:
+        ca = CA(conf, db, ctx.args.ca_ignore_errors)
+
+        while True:
+            process(r, socket, ca)

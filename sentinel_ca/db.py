@@ -9,7 +9,8 @@ from .crypto import cert_from_bytes, get_cert_bytes, get_cert_common_name
 from .exceptions import CASetupError
 
 
-def init_db(conf):
+@contextlib.contextmanager
+def db_connection(conf):
     conn = sqlite3.connect(conf.get("db", "path"))
 
     try:
@@ -20,11 +21,12 @@ def init_db(conf):
                     FROM certs
                     LIMIT 1
             """)
+        yield conn
 
     except sqlite3.OperationalError:
         raise CASetupError("Incorrect DB scheme")
-
-    return conn
+    finally:
+        conn.close()
 
 
 def get_certs(db, identity, date):
