@@ -9,4 +9,4 @@ CREATE TABLE IF NOT EXISTS certs (
     not_before INTEGER NOT NULL,
     not_after INTEGER NOT NULL,
     cert BLOB NOT NULL
-)
+);
