@@ -80,8 +80,8 @@ def check_request(request):
             raise CAParseError("'{}' is missing in the request".format(key))
 
 
-def get_request(r):
-    item = get_redis_item(r, QUEUE_NAME)
+def get_request(r, queue_name=QUEUE_NAME):
+    item = get_redis_item(r, queue_name)
     request = redis_item_to_dict(item)
     logger.debug("REDIS brpop %s: %s", QUEUE_NAME, request)
     return request
