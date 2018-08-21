@@ -20,52 +20,38 @@ def bytes_to_dict(b):
     return json.loads(str(b), encoding='utf-8')
 
 
+def build_checker_reply(status="ok", message="", msg_type="sentinel/certificator/checker"):
+    # add status and message to the payload if they are not None
+    msg_payload = {}
+    if status is not None:
+        msg_payload["status"] = status
+    if message is not None:
+        msg_payload["message"] = message
+
+    return sn.encode_msg(msg_type, msg_payload)
+
+
 def checker_good_reply():
-    return sn.encode_msg(
-            "sentinel/certificator/checker",
-            {
-                "status": "ok",
-                "message": "",
-            }
-    )
+    return build_checker_reply()
 
 
 def checker_fail_reply():
-    return sn.encode_msg(
-            "sentinel/certificator/checker",
-            {
-                "status": "fail",
-                "message": "Auth error happened",
-            }
-    )
+    return build_checker_reply("fail", "Auth error happened")
 
 
 def checker_error_reply():
-    return sn.encode_msg(
-            "sentinel/certificator/checker",
-            {
-                "status": "error",
-                "message": "Interface malformed",
-            }
-    )
+    return build_checker_reply("error", "Checker error")
 
 
 def checker_bad_reply1():
-    return sn.encode_msg(
-            "sentinel/certificator/foo",
-            {
-                "status": "ok",
-                "message": "Interface malformed: Wrong message type",
-            }
-    )
+    return build_checker_reply(None, "Interface malformed: Status is missing")
 
 
 def checker_bad_reply2():
-    return sn.encode_msg(
-            "sentinel/certificator/checker",
-            {
-                "message": "Interface malformed: Status is missing",
-            }
+    return build_checker_reply(
+            "ok",
+            "Interface malformed: Wrong message type",
+            "sentinel/certificator/foo"
     )
 
 
