@@ -23,7 +23,7 @@ devices.
 2. Initialize the sqlite database with `scheme.sql`
 
     ```
-    sqlite db.sqlite < scheme.sql
+    sqlite3 ca.db < scheme.sql
     ```
 
 3. Prepare *Redis* database server
