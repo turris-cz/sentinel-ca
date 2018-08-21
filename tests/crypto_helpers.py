@@ -2,6 +2,7 @@
 Reusable functions for cryptography stuff
 """
 
+import datetime
 import hashlib
 import os
 
@@ -20,36 +21,22 @@ from cryptography.hazmat.primitives import hashes
 ECDSA_CURVE = ec.SECP256R1()
 
 
-def pregen_key():
-    return """-----BEGIN EC PARAMETERS-----
-BgUrgQQAIg==
------END EC PARAMETERS-----
------BEGIN EC PRIVATE KEY-----
-MIGkAgEBBDAsigTYpUhxkr8higCIt0P1eWJvza1l6uYYrxSSSmTJXAMzZtY/o5L/
-lfzrVHhArG2gBwYFK4EEACKhZANiAAR5rbD/kssgpNqd2RfzfTdsVd9fTPxn5cyG
-1YJI/skQNjN6JtWs+iloO1ai9LwG6443n8yufyg4B4l49+f8hbw3C40OVYCnc+yO
-hIgjbGNKZKpALteO4xcEUYO8AuB8p24=
------END EC PRIVATE KEY-----
-"""
+def build_subject(identity):
+    return x509.Name([
+        x509.NameAttribute(NameOID.COMMON_NAME, identity),
+    ])
 
 
-def pregen_cert():
-    return """-----BEGIN CERTIFICATE-----
-MIICWTCCAd6gAwIBAgIJAL9+VgWrARQwMAoGCCqGSM49BAMCMGIxCzAJBgNVBAYT
-AkNaMQ8wDQYDVQQHDAZQcmFndWUxGTAXBgNVBAoMEENaLk5JQywgei5zLnAuby4x
-DzANBgNVBAsMBlR1cnJpczEWMBQGA1UEAwwNVGVzdGluZyBDQSBYNDAeFw0xODA4
-MTYxNDQyMjVaFw0xOTAxMTMxNDQyMjVaMGIxCzAJBgNVBAYTAkNaMQ8wDQYDVQQH
-DAZQcmFndWUxGTAXBgNVBAoMEENaLk5JQywgei5zLnAuby4xDzANBgNVBAsMBlR1
-cnJpczEWMBQGA1UEAwwNVGVzdGluZyBDQSBYNDB2MBAGByqGSM49AgEGBSuBBAAi
-A2IABHmtsP+SyyCk2p3ZF/N9N2xV319M/GflzIbVgkj+yRA2M3om1az6KWg7VqL0
-vAbrjjefzK5/KDgHiXj35/yFvDcLjQ5VgKdz7I6EiCNsY0pkqkAu147jFwRRg7wC
-4HynbqNgMF4wHQYDVR0OBBYEFCNJiZ1Z59QYU0pMID2bOV5p+t+CMB8GA1UdIwQY
-MBaAFCNJiZ1Z59QYU0pMID2bOV5p+t+CMA8GA1UdEwEB/wQFMAMBAf8wCwYDVR0P
-BAQDAgEGMAoGCCqGSM49BAMCA2kAMGYCMQCeFTAmUmzlCFZKHAlfFaDNIYGA77M1
-wCJNow21oMdeQ7iuz3Fqo+p645VoVhehmF4CMQCgArqUfn2afCVq6jxSuxbiCh2n
-RVNZSm/Vu9R7RZzg6VpRiIyshXT+DN1NzVbK8R4=
------END CERTIFICATE-----
-"""
+def key_to_bytes(private_key):
+    return private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+    )
+
+
+def cert_to_bytes(cert):
+    return cert.public_bytes(serialization.Encoding.PEM)
 
 
 def gen_key(curve=ECDSA_CURVE):
@@ -69,6 +56,64 @@ def gen_csr(device_id):
     csr = csr.sign(private_key, hashes.SHA256(), default_backend())
 
     return csr.public_bytes(serialization.Encoding.PEM)
+
+
+def gen_cacert(private_key, common_name="Fake Sentinel:CA for pytest"):
+    subject = build_subject(common_name)
+
+    not_before = datetime.datetime.utcnow()
+    not_after = not_before + datetime.timedelta(days=365)
+    serial_number = x509.random_serial_number()
+
+    # Generate v1 cert (without extensions) ----------
+    cert = x509.CertificateBuilder(
+            issuer_name=subject,
+            subject_name=subject,
+            public_key=private_key.public_key(),
+            serial_number=serial_number,
+            not_valid_before=not_before,
+            not_valid_after=not_after,
+    )
+
+    # Add needed extensions --------------------------
+    # Basic Constraints
+    cert = cert.add_extension(
+            x509.BasicConstraints(
+                    ca=True,
+                    path_length=None
+            ),
+            critical=True
+    )
+
+    # Key Identifiers
+    ski = x509.SubjectKeyIdentifier.from_public_key(private_key.public_key())
+    aki = x509.AuthorityKeyIdentifier(
+            ski.digest,
+            authority_cert_issuer=None,
+            authority_cert_serial_number=None
+    )
+    cert = cert.add_extension(ski, critical=False)
+    cert = cert.add_extension(aki, critical=False)
+
+    # KeyUsage
+    cert = cert.add_extension(
+            x509.KeyUsage(
+                    digital_signature=False,
+                    content_commitment=False,
+                    key_encipherment=False,
+                    data_encipherment=False,
+                    key_agreement=False,
+                    key_cert_sign=True,
+                    crl_sign=True,
+                    encipher_only=False,
+                    decipher_only=False
+            ),
+            critical=False
+    )
+
+    # self-sign the cert -----------------------------
+    cert = cert.sign(private_key, hashes.SHA256(), default_backend())
+    return cert
 
 
 def build_good_request():

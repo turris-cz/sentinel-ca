@@ -13,7 +13,7 @@ import pytest
 from sentinel_ca.ca import CA
 from sentinel_ca.sn import prepare_config
 
-from .crypto_helpers import pregen_key, pregen_cert
+from .crypto_helpers import gen_key, gen_cacert, key_to_bytes, cert_to_bytes
 
 @pytest.fixture
 def redis_mock():
@@ -52,8 +52,11 @@ def ca_config(tmpdir):
     key_path = tmpdir.join("key.pem")
     cert_path = tmpdir.join("cert.pem")
 
-    key_path.write(pregen_key())
-    cert_path.write(pregen_cert())
+    key = gen_key()
+    cert = gen_cacert(key)
+
+    key_path.write(key_to_bytes(key))
+    cert_path.write(cert_to_bytes(cert))
 
     # apply sentinel_ca config defaults
     conf = prepare_config()
