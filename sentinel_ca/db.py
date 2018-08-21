@@ -29,8 +29,8 @@ def db_connection(conf):
         conn.close()
 
 
-def get_certs(db, identity, date):
-    with contextlib.closing(db.cursor()) as c:
+def get_certs(conn, identity, date):
+    with contextlib.closing(conn.cursor()) as c:
         c.execute("""
                 SELECT cert
                   FROM certs
@@ -46,24 +46,24 @@ def get_certs(db, identity, date):
             yield cert_from_bytes(row[0])
 
 
-def store_cert(db, cert):
+def store_cert(conn, cert):
     serial_number = cert.serial_number
     identity = get_cert_common_name(cert)
     not_before = cert.not_valid_before
     not_after = cert.not_valid_after
     cert_bytes = get_cert_bytes(cert)
 
-    with contextlib.closing(db.cursor()) as c:
+    with contextlib.closing(conn.cursor()) as c:
         c.execute("""
                 INSERT INTO certs(sn, state, common_name, not_before, not_after, cert)
                   VALUES (?,?,?,?,?,?)
                 """,
                 (str(serial_number), "valid", identity, not_before, not_after, cert_bytes)
         )
-    db.commit()
+    conn.commit()
 
 
-def row_with_serial_number(db, serial_number):
-    with contextlib.closing(db.cursor()) as c:
+def row_with_serial_number(conn, serial_number):
+    with contextlib.closing(conn.cursor()) as c:
         c.execute('SELECT * FROM certs WHERE sn=?', (str(serial_number),))
         return c.fetchone()
