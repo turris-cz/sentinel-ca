@@ -14,13 +14,13 @@ def init_db(conf):
 
     try:
         # test table and columns existence
-        c = conn.cursor()
-        c.execute("""
-                SELECT sn, state, common_name, not_before, not_after, cert
-                  FROM certs
-                  LIMIT 1
-        """)
-        c.close()
+        with contextlib.closing(conn.cursor()) as c:
+            c.execute("""
+                    SELECT sn, state, common_name, not_before, not_after, cert
+                    FROM certs
+                    LIMIT 1
+            """)
+
     except sqlite3.OperationalError:
         raise CASetupError("Incorrect DB scheme")
 
