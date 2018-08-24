@@ -15,6 +15,11 @@ from .crypto_helpers import \
         gen_cacert, \
         gen_expired_cacert, \
         gen_not_valid_yet_cacert, \
+        gen_no_basic_constraints_cacert, \
+        gen_false_basic_constraints_cacert, \
+        gen_no_key_usage_cacert, \
+        gen_false_key_usage_cacert, \
+        gen_no_key_identifiers_cacert, \
         key_to_bytes, \
         cert_to_bytes
 from .db_helpers import prepare_db
@@ -51,6 +56,11 @@ def test_ca_key_cert_mismatch(tmpdir):
         (
             gen_expired_cacert,
             gen_not_valid_yet_cacert,
+            gen_no_basic_constraints_cacert,
+            gen_false_basic_constraints_cacert,
+            gen_no_key_usage_cacert,
+            gen_false_key_usage_cacert,
+            gen_no_key_identifiers_cacert,
         )
 )
 def test_check_cert(gen_function):
