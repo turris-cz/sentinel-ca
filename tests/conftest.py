@@ -14,6 +14,7 @@ from sentinel_ca.sn import prepare_config
 
 from .crypto_helpers import gen_key, gen_cacert, key_to_bytes, cert_to_bytes
 from .db_helpers import prepare_db
+from .sn_helpers import checker_good_reply
 
 
 @pytest.fixture
@@ -36,6 +37,10 @@ def socket_mock():
     return socket
 
 
+@pytest.fixture
+def good_socket_mock(socket_mock):
+    socket_mock.recv_multipart.return_value = checker_good_reply()
+    return socket_mock
 
 
 @pytest.fixture

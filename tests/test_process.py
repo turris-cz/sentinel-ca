@@ -23,8 +23,7 @@ from .sn_helpers import \
         checker_bad_reply1, \
         checker_bad_reply2, \
         checker_error_reply, \
-        checker_fail_reply, \
-        checker_good_reply
+        checker_fail_reply
 
 
 def dict_to_bytes(d):
@@ -35,19 +34,18 @@ def bytes_to_dict(b):
     return json.loads(str(b), encoding='utf-8')
 
 
-def test_process_good_request(redis_mock, socket_mock, ca):
+def test_process_good_request(redis_mock, good_socket_mock, ca):
     # prepare env
     req = good_request()
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
-    socket_mock.recv_multipart.return_value = checker_good_reply()
 
     # test
-    process(redis_mock, socket_mock, ca)
+    process(redis_mock, good_socket_mock, ca)
 
     # Check SN interaction
-    assert socket_mock.send_multipart.called
-    assert socket_mock.send_multipart.call_count == 1
-    msg = socket_mock.send_multipart.call_args[0][0]
+    assert good_socket_mock.send_multipart.called
+    assert good_socket_mock.send_multipart.call_count == 1
+    msg = good_socket_mock.send_multipart.call_args[0][0]
     msg_type, msg_payload = sn.parse_msg(msg)
     assert msg_type == "sentinel/certificator/checker"
     for key in ("sn", "nonce", "digest", "auth_type"):
@@ -78,17 +76,16 @@ def test_process_good_request(redis_mock, socket_mock, ca):
             {"req": bad_request_invalid_csr_hash(), "has_csr": True},
         )
 )
-def test_process_bad_request_invalid_csr(redis_mock, socket_mock, ca, param):
+def test_process_bad_request_invalid_csr(redis_mock, good_socket_mock, ca, param):
     # prepare env
     req = param["req"]
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
-    socket_mock.recv_multipart.return_value = checker_good_reply()
 
     # test
-    process(redis_mock, socket_mock, ca)
+    process(redis_mock, good_socket_mock, ca)
 
     # Check SN interaction
-    assert not socket_mock.send_multipart.called
+    assert not good_socket_mock.send_multipart.called
 
     # Check redis interaction
     assert redis_mock.set.call_count == 1
@@ -102,46 +99,43 @@ def test_process_bad_request_invalid_csr(redis_mock, socket_mock, ca, param):
         assert not ca.get_valid_cert_matching_csr(req["sn"], csr)
 
 
-def test_process_empty_redis(redis_mock, socket_mock, ca):
+def test_process_empty_redis(redis_mock, good_socket_mock, ca):
     # prepare env
     redis_mock.brpop.return_value = None
-    socket_mock.recv_multipart.return_value = checker_good_reply()
 
     # test
-    process(redis_mock, socket_mock, ca)
+    process(redis_mock, good_socket_mock, ca)
 
     # Check SN interaction
-    assert not socket_mock.send_multipart.called
+    assert not good_socket_mock.send_multipart.called
     # Check redis interaction
     assert not redis_mock.set.called
 
 
-def test_process_bad_request_empty(redis_mock, socket_mock, ca):
+def test_process_bad_request_empty(redis_mock, good_socket_mock, ca):
     # prepare env
     req = bad_request_empty()
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
-    socket_mock.recv_multipart.return_value = checker_good_reply()
 
     # test
-    process(redis_mock, socket_mock, ca)
+    process(redis_mock, good_socket_mock, ca)
 
     # Check SN interaction
-    assert not socket_mock.send_multipart.called
+    assert not good_socket_mock.send_multipart.called
     # Check redis interaction
     assert not redis_mock.set.called
 
 
 @pytest.mark.parametrize("req", bad_request_missing())
-def test_process_bad_request_missing(redis_mock, socket_mock, ca, req):
+def test_process_bad_request_missing(redis_mock, good_socket_mock, ca, req):
     # prepare env
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
-    socket_mock.recv_multipart.return_value = checker_good_reply()
 
     # test
-    process(redis_mock, socket_mock, ca)
+    process(redis_mock, good_socket_mock, ca)
 
     # Check SN interaction
-    assert not socket_mock.send_multipart.called
+    assert not good_socket_mock.send_multipart.called
     # Check redis interaction
     assert not redis_mock.set.called
 
