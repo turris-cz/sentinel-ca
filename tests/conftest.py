@@ -4,8 +4,6 @@ PyTest init, mocks and fixtures
 import sys
 sys.path.append("..")
 
-import contextlib
-import sqlite3
 from unittest.mock import Mock
 
 import pytest
@@ -15,6 +13,8 @@ from sentinel_ca.ca import CA
 from sentinel_ca.sn import prepare_config
 
 from .crypto_helpers import gen_key, gen_cacert, key_to_bytes, cert_to_bytes
+from .db_helpers import prepare_db
+
 
 @pytest.fixture
 def redis_mock():
@@ -36,14 +36,6 @@ def socket_mock():
     return socket
 
 
-
-
-def prepare_db(db_path):
-    with sqlite3.connect(db_path) as conn:
-        with contextlib.closing(conn.cursor()) as c:
-            with open("scheme.sql") as scheme:
-                c.executescript(scheme.read())
-        conn.commit()
 
 
 @pytest.fixture
