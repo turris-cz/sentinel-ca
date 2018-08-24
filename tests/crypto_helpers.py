@@ -62,11 +62,18 @@ def gen_csr(device_id, valid_hash=True):
     return csr
 
 
-def gen_cacert(private_key, common_name="Fake Sentinel:CA for pytest"):
+def gen_cacert(
+        private_key,
+        not_before=None,
+        not_after=None,
+        common_name="Fake Sentinel:CA for pytest"
+):
     subject = build_subject(common_name)
 
-    not_before = datetime.datetime.utcnow()
-    not_after = not_before + datetime.timedelta(days=365)
+    if not_before is None:
+        not_before = datetime.datetime.utcnow()
+    if not_after is None:
+        not_after = not_before + datetime.timedelta(days=365)
     serial_number = x509.random_serial_number()
 
     # Generate v1 cert (without extensions) ----------
@@ -118,6 +125,17 @@ def gen_cacert(private_key, common_name="Fake Sentinel:CA for pytest"):
     # self-sign the cert -----------------------------
     cert = cert.sign(private_key, hashes.SHA256(), default_backend())
     return cert
+
+
+def gen_expired_cacert(private_key):
+    not_before = datetime.datetime.utcnow() - datetime.timedelta(weeks=1)
+    not_after = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+    return gen_cacert(private_key, not_before=not_before, not_after=not_after)
+
+
+def gen_not_valid_yet_cacert(private_key):
+    not_before = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+    return gen_cacert(private_key, not_before=not_before)
 
 
 def build_request(valid_subject_name=True, valid_hash=True):
