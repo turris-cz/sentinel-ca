@@ -19,6 +19,12 @@ from .crypto_helpers import \
         cert_from_bytes, \
         csr_from_str, \
         get_cert_common_name
+from .sn_helpers import \
+        checker_bad_reply1, \
+        checker_bad_reply2, \
+        checker_error_reply, \
+        checker_fail_reply, \
+        checker_good_reply
 
 
 def dict_to_bytes(d):
@@ -27,41 +33,6 @@ def dict_to_bytes(d):
 
 def bytes_to_dict(b):
     return json.loads(str(b), encoding='utf-8')
-
-
-def build_checker_reply(status="ok", message="", msg_type="sentinel/certificator/checker"):
-    # add status and message to the payload if they are not None
-    msg_payload = {}
-    if status is not None:
-        msg_payload["status"] = status
-    if message is not None:
-        msg_payload["message"] = message
-
-    return sn.encode_msg(msg_type, msg_payload)
-
-
-def checker_good_reply():
-    return build_checker_reply()
-
-
-def checker_fail_reply():
-    return build_checker_reply("fail", "Auth error happened")
-
-
-def checker_error_reply():
-    return build_checker_reply("error", "Checker error")
-
-
-def checker_bad_reply1():
-    return build_checker_reply(None, "Interface malformed: Status is missing")
-
-
-def checker_bad_reply2():
-    return build_checker_reply(
-            "ok",
-            "Interface malformed: Wrong message type",
-            "sentinel/certificator/foo"
-    )
 
 
 def test_process_good_request(redis_mock, socket_mock, ca):
