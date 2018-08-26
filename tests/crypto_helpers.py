@@ -153,6 +153,12 @@ def gen_cacert(
     return cert
 
 
+def gen_soon_to_be_expired_cacert(private_key):
+    not_before = datetime.datetime.utcnow() - datetime.timedelta(weeks=1)
+    not_after = datetime.datetime.utcnow() + datetime.timedelta(weeks=1)
+    return gen_cacert(private_key, not_before=not_before, not_after=not_after)
+
+
 def gen_expired_cacert(private_key):
     not_before = datetime.datetime.utcnow() - datetime.timedelta(weeks=1)
     not_after = datetime.datetime.utcnow() - datetime.timedelta(hours=1)

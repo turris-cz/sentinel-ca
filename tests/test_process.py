@@ -8,6 +8,7 @@ import pytest
 
 import sn
 from sentinel_ca.main import process
+from sentinel_ca.exceptions import CAError
 
 from .crypto_helpers import \
         bad_request_empty, \
@@ -66,6 +67,26 @@ def test_process_good_request(redis_mock, good_socket_mock, ca):
     # Check certs in sqlite
     csr = csr_from_str(req["csr_str"])
     assert ca.get_valid_cert_matching_csr(req["sn"], csr)
+
+
+def test_process_cacert_expire_soon(redis_mock, good_socket_mock, ca_expire_soon):
+    # prepare env
+    req = good_request()
+    redis_mock.brpop.return_value = (1, dict_to_bytes(req))
+
+    # test
+    with pytest.raises(CAError):
+        process(redis_mock, good_socket_mock, ca_expire_soon)
+
+    # Check SN interaction
+    assert good_socket_mock.send_multipart.called
+
+    # Check redis interaction
+    assert not redis_mock.set.called
+
+    # Check certs in sqlite
+    csr = csr_from_str(req["csr_str"])
+    assert not ca_expire_soon.get_valid_cert_matching_csr(req["sn"], csr)
 
 
 @pytest.mark.parametrize(
