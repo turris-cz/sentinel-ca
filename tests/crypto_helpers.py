@@ -228,6 +228,10 @@ def bad_request_empty():
     return None
 
 
+def bad_request_no_json():
+    return "This is not a dictionary"
+
+
 def bad_request_missing():
     req = build_request()
     for subreq in itertools.combinations(req, len(req)-1):

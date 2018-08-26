@@ -13,6 +13,7 @@ from sentinel_ca.exceptions import CAError
 from .crypto_helpers import \
         bad_request_empty, \
         bad_request_missing, \
+        bad_request_no_json, \
         bad_request_invalid_csr, \
         bad_request_invalid_csr_name, \
         bad_request_invalid_csr_hash, \
@@ -145,6 +146,37 @@ def test_process_bad_request_empty(redis_mock, good_socket_mock, ca):
     assert not good_socket_mock.send_multipart.called
     # Check redis interaction
     assert not redis_mock.set.called
+
+
+def test_process_bad_request_no_json(redis_mock, good_socket_mock, ca):
+    # prepare env
+    req = bad_request_no_json()
+    redis_mock.brpop.return_value = (1, bytes(req, encoding='utf-8'))
+
+    # test
+    process(redis_mock, good_socket_mock, ca)
+
+    # Check SN interaction
+    assert not good_socket_mock.send_multipart.called
+    # Check redis interaction
+    assert not redis_mock.set.called
+
+
+def test_process_bad_request_encoding(redis_mock, good_socket_mock, ca):
+    # prepare env
+    req = good_request()
+    redis_mock.brpop.return_value = (1, bytes(json.dumps(req), encoding='utf-16'))
+
+    # test
+    process(redis_mock, good_socket_mock, ca)
+
+    # Check SN interaction
+    assert not good_socket_mock.send_multipart.called
+    # Check redis interaction
+    assert not redis_mock.set.called
+
+    csr = csr_from_str(req["csr_str"])
+    assert not ca.get_valid_cert_matching_csr(req["sn"], csr)
 
 
 @pytest.mark.parametrize("req", bad_request_missing())
