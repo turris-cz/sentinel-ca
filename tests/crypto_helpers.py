@@ -190,11 +190,14 @@ def gen_no_key_identifiers_cacert(private_key):
     return gen_cacert(private_key, ext_key_identifiers=False)
 
 
-def build_request(valid_subject_name=True, valid_hash=True):
+def build_request(renew=False, valid_subject_name=True, valid_hash=True):
     device_id = os.urandom(8).hex()
     sid = os.urandom(16).hex()
     nonce = os.urandom(16).hex()
-    flags = ()
+    if renew:
+        flags = ("renew",)
+    else:
+        flags = ()
 
     to_hash = "{}:{}".format(device_id, nonce)
     hash_digest = hashlib.sha256(bytes(to_hash, encoding='utf-8'))
@@ -222,6 +225,10 @@ def build_request(valid_subject_name=True, valid_hash=True):
 
 def good_request():
     return build_request()
+
+
+def good_request_renew():
+    return build_request(renew=True)
 
 
 def bad_request_empty():
