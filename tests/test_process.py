@@ -70,6 +70,49 @@ def test_process_good_request(redis_mock, good_socket_mock, ca):
     assert ca.get_valid_cert_matching_csr(req["sn"], csr)
 
 
+def test_process_repeated_request(redis_mock, good_socket_mock, ca):
+    # prepare env
+    req = good_request()
+    redis_mock.brpop.return_value = (1, dict_to_bytes(req))
+
+    # issue the cert
+    process(redis_mock, good_socket_mock, ca)
+
+    # Check SN interaction
+    assert good_socket_mock.send_multipart.called
+
+    # Check redis interaction
+    assert redis_mock.set.called
+    assert redis_mock.set.call_count == 2
+    # auth_state
+    auth_state = bytes_to_dict(redis_mock.set.call_args_list[1][0][1])
+    assert auth_state["status"] == "ok"
+    # cert
+    cert_bytes = redis_mock.set.call_args_list[0][0][1]
+    cert = cert_from_bytes(cert_bytes)
+    assert get_cert_common_name(cert) == req["sn"]
+
+    # Check certs in sqlite
+    csr = csr_from_str(req["csr_str"])
+    assert ca.get_valid_cert_matching_csr(req["sn"], csr)
+
+    # test again with the same request
+    process(redis_mock, good_socket_mock, ca)
+
+    # Check SN interaction
+    assert good_socket_mock.send_multipart.called
+
+    # Check redis interaction
+    assert redis_mock.set.call_count == 4
+    # auth_state
+    auth_state = bytes_to_dict(redis_mock.set.call_args_list[3][0][1])
+    assert auth_state["status"] == "ok"
+
+    # second certificate match the first one
+    second_cert_bytes = redis_mock.set.call_args_list[2][0][1]
+    assert second_cert_bytes == cert_bytes
+
+
 def test_process_cacert_expire_soon(redis_mock, good_socket_mock, ca_expire_soon):
     # prepare env
     req = good_request()
