@@ -11,11 +11,6 @@ from sentinel_ca.main import process
 from sentinel_ca.exceptions import CAError
 
 from .crypto_helpers import build_request, cert_from_bytes, csr_from_str, get_cert_common_name
-from .sn_helpers import \
-        checker_bad_reply1, \
-        checker_bad_reply2, \
-        checker_error_reply, \
-        checker_fail_reply
 
 
 def dict_to_bytes(d):
@@ -286,20 +281,11 @@ def test_process_bad_request_missing(redis_mock, good_socket_mock, ca, bad_reque
         assert not ca.get_valid_cert_matching_csr(req["sn"], csr)
 
 
-@pytest.mark.parametrize(
-        "param",
-        (
-            {"reply": checker_fail_reply(), "status": "fail"},
-            {"reply": checker_error_reply(), "status": "error"},
-            {"reply": checker_bad_reply1(), "status": "error"},
-            {"reply": checker_bad_reply2(), "status": "error"},
-        )
-)
-def test_process_bad_reply(redis_mock, socket_mock, ca, param, good_request):
+def test_process_fail_reply(redis_mock, socket_mock, ca, checker_fail_reply, good_request):
     # prepare env
     req = good_request
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
-    socket_mock.recv_multipart.return_value = param["reply"]
+    socket_mock.recv_multipart.return_value = checker_fail_reply
 
     # test
     process(redis_mock, socket_mock, ca)
@@ -311,7 +297,30 @@ def test_process_bad_reply(redis_mock, socket_mock, ca, param, good_request):
     assert redis_mock.set.call_count == 1
     # auth_state
     auth_state = bytes_to_dict(redis_mock.set.call_args_list[0][0][1])
-    assert auth_state["status"] == param["status"]
+    assert auth_state["status"] == "fail"
+
+    # Check certs in sqlite
+    csr = csr_from_str(req["csr_str"])
+    assert not ca.get_valid_cert_matching_csr(req["sn"], csr)
+
+
+def test_process_bad_reply(redis_mock, socket_mock, ca, checker_error_reply, good_request):
+    # prepare env
+    req = good_request
+    redis_mock.brpop.return_value = (1, dict_to_bytes(req))
+    socket_mock.recv_multipart.return_value = checker_error_reply
+
+    # test
+    process(redis_mock, socket_mock, ca)
+
+    # Check SN interaction
+    assert socket_mock.send_multipart.call_count == 1
+
+    # Check redis interaction
+    assert redis_mock.set.call_count == 1
+    # auth_state
+    auth_state = bytes_to_dict(redis_mock.set.call_args_list[0][0][1])
+    assert auth_state["status"] == "error"
 
     # Check certs in sqlite
     csr = csr_from_str(req["csr_str"])

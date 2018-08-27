@@ -14,7 +14,7 @@ from sentinel_ca.ca import CA
 
 from .ca_helpers import build_ca_config
 from .crypto_helpers import build_request
-from .sn_helpers import checker_good_reply
+from .sn_helpers import build_checker_reply
 
 
 # Request fixtures -----------------------------------------
@@ -64,6 +64,39 @@ def bad_request_missing(request):
     return request.param
 
 
+# Checker reply fixtures -----------------------------------
+@pytest.fixture
+def checker_good_reply():
+    return build_checker_reply()
+
+
+@pytest.fixture
+def checker_fail_reply():
+    return build_checker_reply(
+            status="fail",
+            message="Auth error happened"
+    )
+
+
+@pytest.fixture(params=[
+        build_checker_reply(
+                status="error",
+                message="Checker error"
+        ),
+        build_checker_reply(
+                status=None,
+                message="Interface malformed: Status is missing"
+        ),
+        build_checker_reply(
+                status="ok",
+                message="Interface malformed: Wrong message type",
+                msg_type="sentinel/certificator/foo"
+        ),
+])
+def checker_error_reply(request):
+    return request.param
+
+
 # CA fixtures ----------------------------------------------
 @pytest.fixture
 def ca(tmpdir):
@@ -101,6 +134,6 @@ def socket_mock():
 
 
 @pytest.fixture
-def good_socket_mock(socket_mock):
-    socket_mock.recv_multipart.return_value = checker_good_reply()
+def good_socket_mock(socket_mock, checker_good_reply):
+    socket_mock.recv_multipart.return_value = checker_good_reply
     return socket_mock
