@@ -60,11 +60,15 @@ def test_process_good_request(redis_mock, good_socket_mock, ca):
     assert redis_mock.set.call_count == 2
     # auth_state
     auth_state = bytes_to_dict(redis_mock.set.call_args_list[1][0][1])
+    auth_state_ex = redis_mock.set.call_args_list[1][1]["ex"]
     assert auth_state["status"] == "ok"
+    assert auth_state_ex > 0
     # cert
     cert_bytes = redis_mock.set.call_args_list[0][0][1]
+    cert_bytes_ex = redis_mock.set.call_args_list[0][1]["ex"]
     cert = cert_from_bytes(cert_bytes)
     assert get_cert_common_name(cert) == req["sn"]
+    assert cert_bytes_ex > 0
 
     # Check certs in sqlite
     csr = csr_from_str(req["csr_str"])
