@@ -10,18 +10,7 @@ import sn
 from sentinel_ca.main import process
 from sentinel_ca.exceptions import CAError
 
-from .crypto_helpers import \
-        bad_request_empty, \
-        bad_request_missing, \
-        bad_request_no_json, \
-        bad_request_invalid_csr, \
-        bad_request_invalid_csr_name, \
-        bad_request_invalid_csr_hash, \
-        good_request, \
-        good_request_renew, \
-        cert_from_bytes, \
-        csr_from_str, \
-        get_cert_common_name
+from .crypto_helpers import build_request, cert_from_bytes, csr_from_str, get_cert_common_name
 from .sn_helpers import \
         checker_bad_reply1, \
         checker_bad_reply2, \
@@ -37,9 +26,9 @@ def bytes_to_dict(b):
     return json.loads(str(b), encoding='utf-8')
 
 
-def test_process_good_request(redis_mock, good_socket_mock, ca):
+def test_process_good_request(redis_mock, good_socket_mock, ca, good_request):
     # prepare env
-    req = good_request()
+    req = good_request
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
 
     # test
@@ -75,9 +64,9 @@ def test_process_good_request(redis_mock, good_socket_mock, ca):
     assert ca.get_valid_cert_matching_csr(req["sn"], csr)
 
 
-def test_process_repeated_request(redis_mock, good_socket_mock, ca):
+def test_process_repeated_request(redis_mock, good_socket_mock, ca, good_request):
     # prepare env
-    req = good_request()
+    req = good_request
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
 
     # issue the cert
@@ -118,9 +107,9 @@ def test_process_repeated_request(redis_mock, good_socket_mock, ca):
     assert second_cert_bytes == cert_bytes
 
 
-def test_process_renew(redis_mock, good_socket_mock, ca):
+def test_process_renew(redis_mock, good_socket_mock, ca, good_request_renew):
     # prepare env
-    req = good_request_renew()
+    req = good_request_renew
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
 
     # issue the cert
@@ -161,9 +150,9 @@ def test_process_renew(redis_mock, good_socket_mock, ca):
     assert second_cert_bytes != cert_bytes
 
 
-def test_process_cacert_expire_soon(redis_mock, good_socket_mock, ca_expire_soon):
+def test_process_cacert_expire_soon(redis_mock, good_socket_mock, ca_expire_soon, good_request):
     # prepare env
-    req = good_request()
+    req = good_request
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
 
     # test
@@ -181,17 +170,27 @@ def test_process_cacert_expire_soon(redis_mock, good_socket_mock, ca_expire_soon
     assert not ca_expire_soon.get_valid_cert_matching_csr(req["sn"], csr)
 
 
-@pytest.mark.parametrize(
-        "param",
-        (
-            {"req": bad_request_invalid_csr(), "has_csr": False},
-            {"req": bad_request_invalid_csr_name(), "has_csr": True},
-            {"req": bad_request_invalid_csr_hash(), "has_csr": True},
-        )
-)
-def test_process_bad_request_invalid_csr(redis_mock, good_socket_mock, ca, param):
+def test_process_bad_request_invalid_csr(redis_mock, good_socket_mock, ca, bad_request_invalid_csr):
     # prepare env
-    req = param["req"]
+    req = bad_request_invalid_csr
+    redis_mock.brpop.return_value = (1, dict_to_bytes(req))
+
+    # test
+    process(redis_mock, good_socket_mock, ca)
+
+    # Check SN interaction
+    assert not good_socket_mock.send_multipart.called
+
+    # Check redis interaction
+    assert redis_mock.set.call_count == 1
+    # auth_state
+    auth_state = bytes_to_dict(redis_mock.set.call_args_list[0][0][1])
+    assert auth_state["status"] == "fail"
+
+
+def test_process_bad_request_invalid_csr_params(redis_mock, good_socket_mock, ca, bad_request_invalid_csr_params):
+    # prepare env
+    req = bad_request_invalid_csr_params
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
 
     # test
@@ -207,9 +206,8 @@ def test_process_bad_request_invalid_csr(redis_mock, good_socket_mock, ca, param
     assert auth_state["status"] == "fail"
 
     # Check certs in sqlite
-    if param["has_csr"]:
-        csr = csr_from_str(req["csr_str"])
-        assert not ca.get_valid_cert_matching_csr(req["sn"], csr)
+    csr = csr_from_str(req["csr_str"])
+    assert not ca.get_valid_cert_matching_csr(req["sn"], csr)
 
 
 def test_process_empty_redis(redis_mock, good_socket_mock, ca):
@@ -225,9 +223,9 @@ def test_process_empty_redis(redis_mock, good_socket_mock, ca):
     assert not redis_mock.set.called
 
 
-def test_process_bad_request_empty(redis_mock, good_socket_mock, ca):
+def test_process_bad_request_empty(redis_mock, good_socket_mock, ca, bad_request_empty):
     # prepare env
-    req = bad_request_empty()
+    req = bad_request_empty
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
 
     # test
@@ -239,9 +237,9 @@ def test_process_bad_request_empty(redis_mock, good_socket_mock, ca):
     assert not redis_mock.set.called
 
 
-def test_process_bad_request_no_json(redis_mock, good_socket_mock, ca):
+def test_process_bad_request_no_json(redis_mock, good_socket_mock, ca, bad_request_no_json):
     # prepare env
-    req = bad_request_no_json()
+    req = bad_request_no_json
     redis_mock.brpop.return_value = (1, bytes(req, encoding='utf-8'))
 
     # test
@@ -253,9 +251,9 @@ def test_process_bad_request_no_json(redis_mock, good_socket_mock, ca):
     assert not redis_mock.set.called
 
 
-def test_process_bad_request_encoding(redis_mock, good_socket_mock, ca):
+def test_process_bad_request_encoding(redis_mock, good_socket_mock, ca, good_request):
     # prepare env
-    req = good_request()
+    req = good_request
     redis_mock.brpop.return_value = (1, bytes(json.dumps(req), encoding='utf-16'))
 
     # test
@@ -270,8 +268,8 @@ def test_process_bad_request_encoding(redis_mock, good_socket_mock, ca):
     assert not ca.get_valid_cert_matching_csr(req["sn"], csr)
 
 
-@pytest.mark.parametrize("req", bad_request_missing())
-def test_process_bad_request_missing(redis_mock, good_socket_mock, ca, req):
+def test_process_bad_request_missing(redis_mock, good_socket_mock, ca, bad_request_missing):
+    req = bad_request_missing
     # prepare env
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
 
@@ -297,9 +295,9 @@ def test_process_bad_request_missing(redis_mock, good_socket_mock, ca, req):
             {"reply": checker_bad_reply2(), "status": "error"},
         )
 )
-def test_process_bad_reply(redis_mock, socket_mock, ca, param):
+def test_process_bad_reply(redis_mock, socket_mock, ca, param, good_request):
     # prepare env
-    req = good_request()
+    req = good_request
     redis_mock.brpop.return_value = (1, dict_to_bytes(req))
     socket_mock.recv_multipart.return_value = param["reply"]
 

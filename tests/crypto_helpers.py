@@ -4,7 +4,6 @@ Reusable functions for cryptography stuff
 
 import datetime
 import hashlib
-import itertools
 import os
 
 # backend
@@ -221,42 +220,6 @@ def build_request(renew=False, valid_subject_name=True, valid_hash=True):
     }
 
     return req
-
-
-def good_request():
-    return build_request()
-
-
-def good_request_renew():
-    return build_request(renew=True)
-
-
-def bad_request_empty():
-    return None
-
-
-def bad_request_no_json():
-    return "This is not a dictionary"
-
-
-def bad_request_missing():
-    req = build_request()
-    for subreq in itertools.combinations(req, len(req)-1):
-        yield {i: req[i] for i in subreq}
-
-
-def bad_request_invalid_csr():
-    req = build_request()
-    req["csr_str"] = "foobar"
-    return req
-
-
-def bad_request_invalid_csr_name():
-    return build_request(valid_subject_name=False)
-
-
-def bad_request_invalid_csr_hash():
-    return build_request(valid_hash=False)
 
 
 def cert_from_bytes(cert_bytes):
