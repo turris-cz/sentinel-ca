@@ -47,14 +47,17 @@ def gen_key(curve=ECDSA_CURVE):
     )
 
 
-def gen_csr(device_id):
+def gen_csr(device_id, valid_hash=True):
     private_key = gen_key()
 
     subject = x509.Name([
             x509.NameAttribute(NameOID.COMMON_NAME, device_id),
     ])
     csr = x509.CertificateSigningRequestBuilder(subject_name=subject)
-    csr = csr.sign(private_key, hashes.SHA256(), default_backend())
+    if valid_hash:
+        csr = csr.sign(private_key, hashes.SHA256(), default_backend())
+    else:
+        csr = csr.sign(private_key, hashes.SHA1(), default_backend())
 
     return csr
 
@@ -117,7 +120,7 @@ def gen_cacert(private_key, common_name="Fake Sentinel:CA for pytest"):
     return cert
 
 
-def build_request():
+def build_request(valid_subject_name=True, valid_hash=True):
     device_id = os.urandom(8).hex()
     sid = os.urandom(16).hex()
     nonce = os.urandom(16).hex()
@@ -127,7 +130,12 @@ def build_request():
     hash_digest = hashlib.sha256(bytes(to_hash, encoding='utf-8'))
     digest = hash_digest.hexdigest()
 
-    csr = csr_to_str(gen_csr(device_id))
+    if valid_subject_name:
+        identity = device_id
+    else:
+        identity = "FakeIdentity"
+
+    csr = gen_csr(identity, valid_hash)
 
     req = {
             "sn": device_id,
@@ -135,7 +143,7 @@ def build_request():
             "auth_type": "dummy",
             "nonce": nonce,
             "digest": digest,
-            "csr_str": csr,
+            "csr_str": csr_to_str(csr),
             "flags": flags,
     }
 
@@ -160,6 +168,14 @@ def bad_request_invalid_csr():
     req = build_request()
     req["csr_str"] = "foobar"
     return req
+
+
+def bad_request_invalid_csr_name():
+    return build_request(valid_subject_name=False)
+
+
+def bad_request_invalid_csr_hash():
+    return build_request(valid_hash=False)
 
 
 def cert_from_bytes(cert_bytes):

@@ -13,6 +13,8 @@ from .crypto_helpers import \
         bad_request_empty, \
         bad_request_missing, \
         bad_request_invalid_csr, \
+        bad_request_invalid_csr_name, \
+        bad_request_invalid_csr_hash, \
         good_request, \
         cert_from_bytes, \
         csr_from_str, \
@@ -95,6 +97,38 @@ def test_process_good_request(redis_mock, socket_mock, ca):
     # Check certs in sqlite
     csr = csr_from_str(req["csr_str"])
     assert ca.get_valid_cert_matching_csr(req["sn"], csr)
+
+
+@pytest.mark.parametrize(
+        "param",
+        (
+            {"req": bad_request_invalid_csr(), "has_csr": False},
+            {"req": bad_request_invalid_csr_name(), "has_csr": True},
+            {"req": bad_request_invalid_csr_hash(), "has_csr": True},
+        )
+)
+def test_process_bad_request_invalid_csr(redis_mock, socket_mock, ca, param):
+    # prepare env
+    req = param["req"]
+    redis_mock.brpop.return_value = (1, dict_to_bytes(req))
+    socket_mock.recv_multipart.return_value = checker_good_reply()
+
+    # test
+    process(redis_mock, socket_mock, ca)
+
+    # Check SN interaction
+    assert not socket_mock.send_multipart.called
+
+    # Check redis interaction
+    assert redis_mock.set.call_count == 1
+    # auth_state
+    auth_state = bytes_to_dict(redis_mock.set.call_args_list[0][0][1])
+    assert auth_state["status"] == "fail"
+
+    # Check certs in sqlite
+    if param["has_csr"]:
+        csr = csr_from_str(req["csr_str"])
+        assert not ca.get_valid_cert_matching_csr(req["sn"], csr)
 
 
 def test_process_empty_redis(redis_mock, socket_mock, ca):
