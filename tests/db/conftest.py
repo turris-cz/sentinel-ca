@@ -17,31 +17,16 @@ def prepare_db_empty(db_path):
 def prepare_db_missing_column(db_path):
     with sqlite3.connect(db_path) as conn:
         with contextlib.closing(conn.cursor()) as c:
-            c.execute("""
-                    CREATE TABLE certs (
-                        id INTEGER PRIMARY KEY,
-                        sn TEXT UNIQUE NOT NULL,
-                        common_name TEXT NOT NULL,
-                        not_before INTEGER NOT NULL,
-                        not_after INTEGER NOT NULL,
-                        cert BLOB NOT NULL
-                    )
-                    """
-            )
+            with open("tests/db/scheme_missing_column.sql") as scheme:
+                c.executescript(scheme.read())
         conn.commit()
 
 
 def prepare_db_wrong_table_name(db_path):
     with sqlite3.connect(db_path) as conn:
         with contextlib.closing(conn.cursor()) as c:
-            with open("scheme.sql") as scheme:
+            with open("tests/db/scheme_wrong_table_name.sql") as scheme:
                 c.executescript(scheme.read())
-        with contextlib.closing(conn.cursor()) as c:
-            c.execute("""
-                    ALTER TABLE certs
-                    RENAME TO cert
-                    """
-            )
         conn.commit()
 
 
