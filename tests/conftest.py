@@ -12,9 +12,8 @@ import pytest
 from sentinel_ca.db import db_connection
 from sentinel_ca.ca import CA
 
-from .ca_helpers import build_ca_config
+from .helpers import build_ca_config, build_checker_reply
 from .crypto_helpers import build_request
-from .sn_helpers import build_checker_reply
 
 
 # Request fixtures -----------------------------------------
