@@ -1,0 +1,3 @@
+---- scheme.sql
+--
+-- A scheme to test empty db
