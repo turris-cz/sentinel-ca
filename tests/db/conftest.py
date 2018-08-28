@@ -2,20 +2,11 @@
 PyTest init, mocks and fixtures
 """
 
-import contextlib
-import sqlite3
-
 import pytest
 
 from sentinel_ca.sn import prepare_config
 
-
-def prepare_db_scheme(db_path, scheme_path):
-    with sqlite3.connect(db_path) as conn:
-        with contextlib.closing(conn.cursor()) as c:
-            with open(scheme_path) as scheme:
-                c.executescript(scheme.read())
-        conn.commit()
+from ..helpers import prepare_db_scheme
 
 
 @pytest.fixture(params=[

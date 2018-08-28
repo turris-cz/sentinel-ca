@@ -21,10 +21,10 @@ def bytes_to_dict(b):
     return json.loads(str(b), encoding='utf-8')
 
 
-def prepare_db(db_path):
+def prepare_db_scheme(db_path, scheme_path="scheme.sql"):
     with sqlite3.connect(db_path) as conn:
         with contextlib.closing(conn.cursor()) as c:
-            with open("scheme.sql") as scheme:
+            with open(scheme_path) as scheme:
                 c.executescript(scheme.read())
         conn.commit()
 
@@ -52,7 +52,7 @@ def build_ca_config(tmpdir, expire_soon=False, wrong_key=False):
 
     # Generate the db
     db_path = tmpdir.join("ca.db")
-    prepare_db(str(db_path))
+    prepare_db_scheme(str(db_path))
 
     # Build the config
     # apply sentinel_ca config defaults
