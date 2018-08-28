@@ -23,7 +23,6 @@ def test_process_repeated_request(redis_mock, good_socket_mock, ca, good_request
     assert good_socket_mock.send_multipart.called
 
     # Check redis interaction
-    assert redis_mock.set.called
     assert redis_mock.set.call_count == 2
     # auth_state
     auth_state = bytes_to_dict(redis_mock.set.call_args_list[1][0][1])
@@ -39,9 +38,6 @@ def test_process_repeated_request(redis_mock, good_socket_mock, ca, good_request
 
     # test again with the same request
     process(redis_mock, good_socket_mock, ca)
-
-    # Check SN interaction
-    assert good_socket_mock.send_multipart.called
 
     # Check redis interaction
     assert redis_mock.set.call_count == 4
@@ -69,7 +65,6 @@ def test_process_renew(redis_mock, good_socket_mock, ca, good_request_renew):
     assert good_socket_mock.send_multipart.called
 
     # Check redis interaction
-    assert redis_mock.set.called
     assert redis_mock.set.call_count == 2
     # auth_state
     auth_state = bytes_to_dict(redis_mock.set.call_args_list[1][0][1])
@@ -85,9 +80,6 @@ def test_process_renew(redis_mock, good_socket_mock, ca, good_request_renew):
 
     # test again with the same request (with "renew" flag)
     process(redis_mock, good_socket_mock, ca)
-
-    # Check SN interaction
-    assert good_socket_mock.send_multipart.called
 
     # Check redis interaction
     assert redis_mock.set.call_count == 4

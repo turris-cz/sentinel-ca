@@ -23,9 +23,6 @@ def test_process_cacert_expire_soon(redis_mock, good_socket_mock, ca_expire_soon
     with pytest.raises(CAError):
         process(redis_mock, good_socket_mock, ca_expire_soon)
 
-    # Check SN interaction
-    assert good_socket_mock.send_multipart.called
-
     # Check redis interaction
     assert not redis_mock.set.called
 
