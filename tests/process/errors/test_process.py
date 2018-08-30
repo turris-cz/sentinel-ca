@@ -2,7 +2,6 @@
 Test CA raction to errors end bad requests
 """
 
-import itertools
 import json
 
 import pytest
@@ -10,8 +9,8 @@ import pytest
 from sentinel_ca.main import process
 from sentinel_ca.exceptions import CAError
 
-from .helpers import dict_to_bytes, bytes_to_dict
-from .crypto_helpers import build_request, csr_from_str
+from ...helpers import dict_to_bytes, bytes_to_dict
+from ...crypto_helpers import csr_from_str
 
 
 def test_process_cacert_expire_soon(redis_mock, good_socket_mock, ca_expire_soon, good_request):

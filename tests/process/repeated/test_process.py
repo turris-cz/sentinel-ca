@@ -4,8 +4,8 @@ Test whole CA processing a repeated requests
 
 from sentinel_ca.main import process
 
-from .helpers import dict_to_bytes, bytes_to_dict
-from .crypto_helpers import cert_from_bytes, csr_from_str, get_cert_common_name
+from ...helpers import dict_to_bytes, bytes_to_dict
+from ...crypto_helpers import cert_from_bytes, csr_from_str, get_cert_common_name
 
 
 def test_process_repeated_request(redis_mock, good_socket_mock, ca, good_request):
