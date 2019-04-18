@@ -24,7 +24,7 @@ REQUIRED_REQUEST_KEYS = [
     "sid",
     "auth_type",
     "nonce",
-    "digest",
+    "signature",
     "csr_str",
     "flags",
 ]

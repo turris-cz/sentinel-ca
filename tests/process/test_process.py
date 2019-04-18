@@ -22,7 +22,7 @@ def test_process_good_request(redis_mock, good_socket_mock, ca, good_request):
     msg = good_socket_mock.send_multipart.call_args[0][0]
     msg_type, msg_payload = sn.parse_msg(msg)
     assert msg_type == "sentinel/certificator/checker"
-    for key in ("sn", "nonce", "digest", "auth_type"):
+    for key in ("sn", "nonce", "signature", "auth_type"):
         assert key in msg_payload
         assert msg_payload[key] == req[key]
 

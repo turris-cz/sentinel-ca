@@ -9,22 +9,22 @@ import checker
 MESSAGE_TYPE = "sentinel/certificator/checker"
 
 
-def msg_payload(sn, nonce=None, good_digest=True):
+def msg_payload(sn, nonce=None, good_signature=True):
     if not nonce:
         nonce = secrets.token_hex(16)
 
-    if good_digest:
+    if good_signature:
         to_hash = "{}:{}".format(sn, nonce)
         hash_digest = hashlib.sha256(bytes(to_hash, encoding='utf-8'))
-        digest = hash_digest.hexdigest()
+        signature = hash_digest.hexdigest()
     else:
-        digest = "d3ADbE3F0042"
+        signature = "d3ADbE3F0042"
 
     msg = {
         "auth_type": "atsha",
         "sn": sn,
         "nonce": nonce,
-        "digest": digest,
+        "signature": signature,
     }
 
     return msg
@@ -54,9 +54,9 @@ def test_missing_msg_part():
     assert "missing in the message" in reply["message"]
 
 
-def test_bad_digest():
-    reply = checker.process(MESSAGE_TYPE, msg_payload("foo", good_digest=False))
+def test_bad_signature():
+    reply = checker.process(MESSAGE_TYPE, msg_payload("foo", good_signature=False))
     print(reply)
 
     assert reply["status"] == "fail"
-    assert "Provided digest is not valid" in reply["message"]
+    assert "Provided signature is not valid" in reply["message"]

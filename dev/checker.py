@@ -14,7 +14,7 @@ REQUIRED_KEYS = [
     "auth_type",
     "sn",
     "nonce",
-    "digest",
+    "signature",
 ]
 
 LOG_MESSAGE_MAPPER = {
@@ -59,11 +59,11 @@ def check_message(msg_type, message):
             raise CheckerServerError("'{}' is missing in the message".format(key))
 
 
-def process_message(device_id, nonce, digest):
+def process_message(device_id, nonce, signature):
     to_hash = "{}:{}".format(device_id, nonce)
     hash_digest = hashlib.sha256(bytes(to_hash, encoding='utf-8'))
-    if digest != hash_digest.hexdigest():
-        raise CheckerClientError("Provided digest is not valid")
+    if signature != hash_digest.hexdigest():
+        raise CheckerClientError("Provided signature is not valid")
 
 
 def build_reply(status, message=""):
@@ -76,7 +76,7 @@ def build_reply(status, message=""):
 def process(msg_type, message):
     try:
         check_message(msg_type, message)
-        process_message(message["sn"], message["nonce"], message["digest"])
+        process_message(message["sn"], message["nonce"], message["signature"])
         return build_reply("ok")
     except CheckerClientError as e:
         return build_reply("fail", str(e))
@@ -88,7 +88,7 @@ def main():
     ctx = sn.SN(zmq.Context.instance(), get_argparser(sn.get_arg_parser()))
     socket = ctx.get_socket(("in", "REP"))
 
-    # Receive the message, compare digest and reply with status (and error message)
+    # Receive the message, compare signature and reply with status (and error message)
     while True:
         zmq_msg = socket.recv_multipart()
         msg_type, message = sn.parse_msg(zmq_msg)

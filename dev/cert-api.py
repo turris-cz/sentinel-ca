@@ -214,7 +214,7 @@ def build_request():
             "sid": sid,
             "auth_type": AUTH_TYPE,
             "nonce": nonce,
-            "digest": digest,
+            "signature": digest,
             "csr_str": csr,
             "flags": flags,
     }

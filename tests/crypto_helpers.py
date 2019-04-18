@@ -200,7 +200,7 @@ def build_request(renew=False, valid_subject_name=True, valid_hash=True):
 
     to_hash = "{}:{}".format(device_id, nonce)
     hash_digest = hashlib.sha256(bytes(to_hash, encoding='utf-8'))
-    digest = hash_digest.hexdigest()
+    signature = hash_digest.hexdigest()
 
     if valid_subject_name:
         identity = device_id
@@ -214,7 +214,7 @@ def build_request(renew=False, valid_subject_name=True, valid_hash=True):
             "sid": sid,
             "auth_type": "dummy",
             "nonce": nonce,
-            "digest": digest,
+            "signature": signature,
             "csr_str": csr_to_str(csr),
             "flags": flags,
     }

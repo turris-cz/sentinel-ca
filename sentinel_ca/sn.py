@@ -19,16 +19,16 @@ logger = logging.getLogger("ca")
 CONFIG_DEFAULT_PATH = "ca.ini"
 
 MESSAGE_TYPE = "sentinel/certificator/checker"
-AUTH_REQUEST_KEYS = [
+AUTH_REQUEST_KEYS = (
     "sn",
     "auth_type",
     "nonce",
-    "digest",
-]
-REQUIRED_AUTH_REPLY_KEYS = [
+    "signature",
+)
+REQUIRED_AUTH_REPLY_KEYS = (
     "status",
     "message",
-]
+)
 
 
 def init_sn():
