@@ -44,6 +44,7 @@ class CA:
         self.db = db
         if not ca_exists_in_db(self.db, self.cert):
             store_ca(self.db, self.cert)
+        self.id = get_ca_id(self.db, self.cert)
 
 
     def get_valid_cert_matching_csr(self, identity, csr, days=VALID_DAYS):
@@ -75,7 +76,7 @@ class CA:
                 not_after=not_after,
         )
         cert = sign_cert(cert, self.key)
-        store_cert(self.db, cert, self.aki)
+        store_cert(self.db, cert, self.id)
 
         return cert
 

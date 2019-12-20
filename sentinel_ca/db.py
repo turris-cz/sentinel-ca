@@ -17,7 +17,7 @@ def db_connection(conf):
         # test table and columns existence
         with contextlib.closing(conn.cursor()) as c:
             c.execute("""
-                    SELECT sn, state, common_name, not_before, not_after, authority_key_identifier, cert
+                    SELECT sn, state, common_name, not_before, not_after, ca_id, cert
                     FROM certs
                     LIMIT 1
                     """
@@ -102,20 +102,18 @@ def store_ca(conn, ca_cert):
     conn.commit()
 
 
-def store_cert(conn, cert, aki):
+def store_cert(conn, cert, ca_id):
     serial_number = cert.serial_number
     identity = get_cert_common_name(cert)
     not_before = cert.not_valid_before
     not_after = cert.not_valid_after
     cert_bytes = get_cert_bytes(cert)
 
-    authority_key_identifier = aki_to_str(aki)
-
     with contextlib.closing(conn.cursor()) as c:
         c.execute("""
-                INSERT INTO certs(sn, state, common_name, not_before, not_after, authority_key_identifier, cert)
+                INSERT INTO certs(sn, state, common_name, not_before, not_after, ca_id, cert)
                 VALUES (?,?,?,?,?,?,?)
                 """,
-                (str(serial_number), "valid", identity, not_before, not_after, authority_key_identifier, cert_bytes)
+                (str(serial_number), "valid", identity, not_before, not_after, ca_id, cert_bytes)
         )
     conn.commit()
