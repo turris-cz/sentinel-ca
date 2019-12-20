@@ -1,6 +1,16 @@
 ---- scheme.sql
 --
--- A scheme for certificate list
+-- A scheme for Sentinel:CA
+
+CREATE TABLE IF NOT EXISTS ca (
+    id INTEGER PRIMARY KEY,
+    issuer_name TEXT NOT NULL UNIQUE,
+    not_before INTEGER NOT NULL,
+    not_after INTEGER NOT NULL,
+    authority_key_identifier TEXT NOT NULL UNIQUE,
+    ca_cert BLOB NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS certs (
     id INTEGER PRIMARY KEY,
     sn TEXT UNIQUE NOT NULL,

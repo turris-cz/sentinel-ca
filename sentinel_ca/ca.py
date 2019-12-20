@@ -10,7 +10,7 @@ import sn
 
 from .exceptions import CAError, CASetupError
 from .crypto import build_aki, build_client_cert, build_subject, cert_from_file, check_cert, key_from_file, key_match, random_serial_number, sign_cert
-from .db import get_certs, store_cert
+from .db import ca_exists_in_db, get_ca_id, get_certs, store_ca, store_cert
 
 logger = logging.getLogger("ca")
 
@@ -23,8 +23,6 @@ VALID_DAYS = int(0.25*CERT_DAYS)
 
 class CA:
     def __init__(self, conf, db, ignore_errors=False):
-        self.db = db
-
         cert_path = conf.get("ca", "cert")
         key_path = conf.get("ca", "key")
         if conf.get("ca", "password"):
@@ -42,6 +40,10 @@ class CA:
             logger.error(str(e))
             if not ignore_errors:
                 raise
+
+        self.db = db
+        if not ca_exists_in_db(self.db, self.cert):
+            store_ca(self.db, self.cert)
 
 
     def get_valid_cert_matching_csr(self, identity, csr, days=VALID_DAYS):
