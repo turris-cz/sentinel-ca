@@ -17,10 +17,11 @@ def db_connection(conf):
         # test table and columns existence
         with contextlib.closing(conn.cursor()) as c:
             c.execute("""
-                    SELECT sn, state, common_name, not_before, not_after, cert
+                    SELECT sn, state, common_name, not_before, not_after, authority_key_identifier, cert
                     FROM certs
                     LIMIT 1
-            """)
+                    """
+            )
         yield conn
 
     except sqlite3.OperationalError:
@@ -49,18 +50,20 @@ def get_certs(conn, identity, date):
             yield cert_from_bytes(row[0])
 
 
-def store_cert(conn, cert):
+def store_cert(conn, cert, aki):
     serial_number = cert.serial_number
     identity = get_cert_common_name(cert)
     not_before = cert.not_valid_before
     not_after = cert.not_valid_after
     cert_bytes = get_cert_bytes(cert)
 
+    authority_key_identifier = aki.key_identifier.hex().upper()
+
     with contextlib.closing(conn.cursor()) as c:
         c.execute("""
-                INSERT INTO certs(sn, state, common_name, not_before, not_after, cert)
-                  VALUES (?,?,?,?,?,?)
+                INSERT INTO certs(sn, state, common_name, not_before, not_after, authority_key_identifier, cert)
+                VALUES (?,?,?,?,?,?,?)
                 """,
-                (str(serial_number), "valid", identity, not_before, not_after, cert_bytes)
+                (str(serial_number), "valid", identity, not_before, not_after, authority_key_identifier, cert_bytes)
         )
     conn.commit()

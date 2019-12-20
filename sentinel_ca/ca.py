@@ -73,7 +73,7 @@ class CA:
                 not_after=not_after,
         )
         cert = sign_cert(cert, self.key)
-        store_cert(self.db, cert)
+        store_cert(self.db, cert, self.aki)
 
         return cert
 
