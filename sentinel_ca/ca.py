@@ -45,6 +45,10 @@ class CA:
 
 
     def get_valid_cert_matching_csr(self, identity, csr, days=VALID_DAYS):
+        """
+        Returns certificate for the common name 'identity', that would be valid
+        at least for 'days' and match public key in the request 'csr'
+        """
         date = datetime.datetime.utcnow() + datetime.timedelta(days=days)
         for cert in get_certs(self.db, identity, date):
             if key_match(cert, csr):
