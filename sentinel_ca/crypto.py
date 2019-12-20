@@ -208,15 +208,23 @@ def get_cert_bytes(cert):
     return cert.public_bytes(serialization.Encoding.PEM)
 
 
-def get_cert_common_name(cert):
+def get_entity_common_name(entity):
     try:
-        common_name = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+        common_name = entity.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
     except Exception:
         # catch all Exceptions as the x509 certificate interface is not so clean
         logger.exception("Common name is not present")
         common_name = "N/A"
 
     return common_name
+
+
+def get_cert_common_name(cert):
+    return get_entity_common_name(cert.subject)
+
+
+def get_issuer_common_name(cert):
+    return get_entity_common_name(cert.issuer)
 
 
 def key_match(csr, cert):
