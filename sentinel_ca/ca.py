@@ -5,15 +5,13 @@ Sentinel:CA certificate authority class
 import datetime
 import logging
 
-from cryptography.hazmat.backends import default_backend
 from cryptography import x509
-from cryptography.hazmat.primitives import hashes
 
 # to setup logger handlers
 import sn
 
 from .exceptions import CAError, CASetupError
-from .crypto import build_aki, build_client_cert, build_subject, cert_from_file, check_cert, key_from_file, key_match
+from .crypto import build_aki, build_client_cert, build_subject, cert_from_file, check_cert, key_from_file, key_match, sign_cert
 from .db import get_certs, store_cert, row_with_serial_number
 
 logger = logging.getLogger("ca")
@@ -23,8 +21,6 @@ logger = logging.getLogger("ca")
 CERT_DAYS = 60
 # 25% before end of validity
 VALID_DAYS = int(0.25*CERT_DAYS)
-# The HashAlgorithm instance used to sign the certificates
-SIGNING_HASH = hashes.SHA256()
 
 
 class CA:
@@ -74,7 +70,7 @@ class CA:
                 not_before=not_before,
                 not_after=not_after,
         )
-        cert = cert.sign(self.key, SIGNING_HASH, default_backend())
+        cert = sign_cert(cert, self.key)
         store_cert(self.db, cert)
 
         return cert

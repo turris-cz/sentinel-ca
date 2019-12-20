@@ -7,8 +7,7 @@ import logging
 import sys
 
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-# signing certs
+from cryptography.hazmat.primitives import serialization, hashes
 from cryptography import x509
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
@@ -26,6 +25,9 @@ ALLOWED_HASHES = {
     "sha384",
     "sha512",
 }
+
+# The HashAlgorithm instance used to sign the certificates
+DEFAULT_SIGNING_HASH = hashes.SHA256()
 
 
 def build_aki(issuer):
@@ -246,3 +248,7 @@ def key_from_file(file_name, password=None):
 
 def key_match(csr, cert):
     return cert.public_key().public_numbers() == csr.public_key().public_numbers()
+
+
+def sign_cert(cert, key, hash_algorithm=DEFAULT_SIGNING_HASH):
+    return cert.sign(key, hash_algorithm, default_backend())
