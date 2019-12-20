@@ -21,8 +21,17 @@ devices.
 ## Usage
 
 1. Generate the key and CA certificate
+
     - For *self-signed* certificate, an example `openssl` configuration is
       provided in `dev/ca_test.cnf`
+
+    - For development purpose, these commands will generate suitable key and cert:
+
+        ```
+        openssl ecparam -genkey -name secp384r1 -out key-ca.pem
+        openssl req -new -x509 -config dev/ca_test.cnf -days 90 -key key-ca.pem -out cert-ca.pem
+        ```
+
 2. Initialize the sqlite database with `scheme.sql`
 
     ```
