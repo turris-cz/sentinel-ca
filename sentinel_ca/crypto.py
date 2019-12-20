@@ -111,6 +111,14 @@ def cert_from_bytes(cert_bytes):
     )
 
 
+def cert_from_file(file_name):
+    with open(file_name, 'rb') as f:
+        return x509.load_pem_x509_certificate(
+                data=f.read(),
+                backend=default_backend()
+        )
+
+
 def csr_from_str(csr_str):
     try:
         # construct x509 request from PEM string
@@ -225,6 +233,15 @@ def get_cert_common_name(cert):
 
 def get_issuer_common_name(cert):
     return get_entity_common_name(cert.issuer)
+
+
+def key_from_file(file_name, password=None):
+    with open(file_name, 'rb') as f:
+        return serialization.load_pem_private_key(
+                data=f.read(),
+                password=password,
+                backend=default_backend()
+        )
 
 
 def key_match(csr, cert):

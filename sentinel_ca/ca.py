@@ -6,7 +6,6 @@ import datetime
 import logging
 
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 
@@ -14,7 +13,7 @@ from cryptography.hazmat.primitives import hashes
 import sn
 
 from .exceptions import CAError, CASetupError
-from .crypto import build_aki, build_client_cert, build_subject, check_cert, key_match
+from .crypto import build_aki, build_client_cert, build_subject, cert_from_file, check_cert, key_from_file, key_match
 from .db import get_certs, store_cert, row_with_serial_number
 
 logger = logging.getLogger("ca")
@@ -39,20 +38,10 @@ class CA:
         else:
             key_password = None
 
-        with open(cert_path, 'rb') as f:
-            self.cert = x509.load_pem_x509_certificate(
-                    data=f.read(),
-                    backend=default_backend()
-            )
-        with open(key_path, 'rb') as f:
-            self.key = serialization.load_pem_private_key(
-                    data=f.read(),
-                    password=key_password,
-                    backend=default_backend()
-            )
-
-
+        self.cert = cert_from_file(cert_path)
+        self.key = key_from_file(key_path, key_password)
         self.aki = build_aki(self.cert)
+
         try:
             check_cert(self.cert, self.key)
         except CASetupError as e:
