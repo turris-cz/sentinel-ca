@@ -63,7 +63,7 @@ def process(r, socket, ca):
         set_auth_error(r, request["sn"], request["sid"], str(e))
 
 
-def run():
+def main():
     logger.info("Sentinel:CA starts")
     ctx, socket = init_sn()
     conf = config(ctx.args.config)
@@ -75,3 +75,7 @@ def run():
 
         while True:
             process(r, socket, ca)
+
+
+if __name__ == "__main__":
+    main()

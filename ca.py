@@ -7,7 +7,7 @@ import sentinel_ca
 
 
 def main():
-    sentinel_ca.run()
+    sentinel_ca.main()
 
 
 if __name__ == "__main__":

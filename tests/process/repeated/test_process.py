@@ -2,7 +2,7 @@
 Test whole CA processing a repeated requests
 """
 
-from sentinel_ca.main import process
+from sentinel_ca.__main__ import process
 
 from ...helpers import dict_to_bytes, bytes_to_dict
 from ...crypto_helpers import cert_from_bytes, csr_from_str, get_cert_common_name

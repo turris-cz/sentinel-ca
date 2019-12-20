@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from sentinel_ca.main import process
+from sentinel_ca.__main__ import process
 from sentinel_ca.exceptions import CAError
 
 from ...helpers import dict_to_bytes, bytes_to_dict
