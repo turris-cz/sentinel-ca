@@ -10,7 +10,7 @@ import sn
 
 from .exceptions import CAError, CASetupError
 from .crypto import build_aki, build_client_cert, build_subject, cert_from_file, check_cert, key_from_file, key_match, random_serial_number, sign_cert
-from .db import get_certs, store_cert, row_with_serial_number
+from .db import get_certs, store_cert
 
 logger = logging.getLogger("ca")
 
@@ -53,7 +53,7 @@ class CA:
 
 
     def issue_cert(self, csr, identity, days=CERT_DAYS):
-        serial_number = self.get_unique_serial_number()
+        serial_number = random_serial_number()
         not_before = datetime.datetime.utcnow()
         not_after = not_before + datetime.timedelta(days=days)
         # raise a CAError when CA cert will not be valid till not_after
@@ -77,16 +77,3 @@ class CA:
     def check_cert_valid_at(self, at):
         if self.cert.not_valid_after < at:
             raise CAError("CA cert will expire sooner than requested")
-
-
-    def get_unique_serial_number(self):
-        # random_serial_number() gives unique values when everything is ok
-        # repeated s/n generation and check for accidental generation and/or OS issues
-        for i in range(42):
-            serial_number = random_serial_number()
-            if row_with_serial_number(self.db, serial_number):
-                logger.warning("random_serial_number() returns duplicated s/n")
-                continue
-            return serial_number
-
-        raise CAError("Could not get unique certificate s/n")

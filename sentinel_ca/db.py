@@ -61,9 +61,3 @@ def store_cert(conn, cert):
                 (str(serial_number), "valid", identity, not_before, not_after, cert_bytes)
         )
     conn.commit()
-
-
-def row_with_serial_number(conn, serial_number):
-    with contextlib.closing(conn.cursor()) as c:
-        c.execute('SELECT * FROM certs WHERE sn=?', (str(serial_number),))
-        return c.fetchone()
