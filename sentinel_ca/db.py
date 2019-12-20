@@ -30,14 +30,17 @@ def db_connection(conf):
 
 
 def get_certs(conn, identity, date):
+    """
+    Iterator returning certs matching identity and valid at the date
+    """
     with contextlib.closing(conn.cursor()) as c:
         c.execute("""
                 SELECT cert
-                  FROM certs
-                  WHERE common_name = ? AND
-                        not_before <= ? AND
-                        ? <= not_after
-                  ORDER BY not_before DESC
+                FROM certs
+                WHERE common_name = ?
+                    AND not_before <= ?
+                    AND ? <= not_after
+                ORDER BY not_before DESC
                 """,
                 (identity, date, date)
         )
