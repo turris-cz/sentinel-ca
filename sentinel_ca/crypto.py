@@ -250,5 +250,9 @@ def key_match(csr, cert):
     return cert.public_key().public_numbers() == csr.public_key().public_numbers()
 
 
+def random_serial_number():
+    return x509.random_serial_number()
+
+
 def sign_cert(cert, key, hash_algorithm=DEFAULT_SIGNING_HASH):
     return cert.sign(key, hash_algorithm, default_backend())

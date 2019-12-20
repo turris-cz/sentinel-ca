@@ -5,13 +5,11 @@ Sentinel:CA certificate authority class
 import datetime
 import logging
 
-from cryptography import x509
-
 # to setup logger handlers
 import sn
 
 from .exceptions import CAError, CASetupError
-from .crypto import build_aki, build_client_cert, build_subject, cert_from_file, check_cert, key_from_file, key_match, sign_cert
+from .crypto import build_aki, build_client_cert, build_subject, cert_from_file, check_cert, key_from_file, key_match, random_serial_number, sign_cert
 from .db import get_certs, store_cert, row_with_serial_number
 
 logger = logging.getLogger("ca")
@@ -85,7 +83,7 @@ class CA:
         # random_serial_number() gives unique values when everything is ok
         # repeated s/n generation and check for accidental generation and/or OS issues
         for i in range(42):
-            serial_number = x509.random_serial_number()
+            serial_number = random_serial_number()
             if row_with_serial_number(self.db, serial_number):
                 logger.warning("random_serial_number() returns duplicated s/n")
                 continue
