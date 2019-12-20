@@ -31,7 +31,7 @@ ALLOWED_HASHES = {
 def build_aki(issuer):
     try:
         # construct AKI from issuer Subject Key Identifier if it has some
-        ski = issuer.extensions.get_extension_for_class(x509.SubjectKeyIdentifier)
+        ski = issuer.extensions.get_extension_for_class(x509.SubjectKeyIdentifier).value
         aki = x509.AuthorityKeyIdentifier.from_issuer_subject_key_identifier(ski)
 
     except x509.ExtensionNotFound:
