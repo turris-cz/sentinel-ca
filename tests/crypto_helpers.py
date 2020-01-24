@@ -5,6 +5,7 @@ Reusable functions for cryptography stuff
 import datetime
 import hashlib
 import os
+import time
 
 # backend
 from cryptography.hazmat.backends import default_backend
@@ -190,6 +191,8 @@ def gen_no_key_identifiers_cacert(private_key):
 
 
 def build_request(renew=False, valid_subject_name=True, valid_hash=True):
+    ts = int(time.time())
+
     device_id = os.urandom(8).hex()
     sid = os.urandom(16).hex()
     nonce = os.urandom(16).hex()
@@ -211,6 +214,7 @@ def build_request(renew=False, valid_subject_name=True, valid_hash=True):
 
     req = {
             "sn": device_id,
+            "ts": ts,
             "sid": sid,
             "auth_type": "dummy",
             "nonce": nonce,

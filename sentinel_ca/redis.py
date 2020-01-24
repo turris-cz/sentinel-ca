@@ -4,6 +4,7 @@ Redis wrappers for Sentinel:CA
 
 import json
 import logging
+
 import redis
 
 # to setup logger handlers
@@ -21,6 +22,7 @@ AUTH_TTL = 5*60
 QUEUE_NAME = "csr"
 REQUIRED_REQUEST_KEYS = [
     "sn",
+    "ts",
     "sid",
     "auth_type",
     "nonce",

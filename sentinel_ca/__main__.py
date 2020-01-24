@@ -3,6 +3,7 @@ Main entry point of Sentinel:CA package
 """
 
 import logging
+import time
 
 import sn
 
@@ -13,7 +14,17 @@ from .exceptions import CAParseError, CARequestClientError, CARequestServerError
 from .redis import init_redis, get_request, check_request, set_cert, set_auth_ok, set_auth_fail, set_auth_error
 from .sn import check_auth, config, init_sn
 
+# a request should be dealed in several tens of seconds
+VALID_REQUEST_THRESHOLD = 40
+
+
 logger = logging.getLogger("ca")
+
+
+def check_timestamp(request):
+    threshold = request["ts"] + VALID_REQUEST_THRESHOLD
+    if int(time.time()) > threshold:
+        raise CARequestServerError("Request is too old")
 
 
 def process(r, socket, ca):
@@ -25,7 +36,11 @@ def process(r, socket, ca):
         return
 
     try:
-        # if anything fails, CARequestServerError is risen
+        # CARequestClientError or CARequestServerError is risen if anything fails
+
+        # do not process old requests
+        check_timestamp(request)
+
         csr = csr_from_str(request["csr_str"])
         check_csr(csr, request["sn"])
         check_auth(socket, request)
