@@ -35,8 +35,10 @@ class CA:
             if not ignore_errors:
                 raise
 
-        self.valid_days = conf.getint("ca", "valid_days")
-        self.valid_days_min = conf.getint("ca", "valid_days_min")
+        valid_days = conf.getint("ca", "valid_days")
+        valid_days_min = conf.getint("ca", "valid_days_min")
+        self.valid_days = datetime.timedelta(days=valid_days)
+        self.valid_days_min = datetime.timedelta(days=valid_days_min)
 
         self.db = db
         if not ca_exists_in_db(self.db, self.cert):
@@ -50,7 +52,7 @@ class CA:
         in the request 'csr' and that would be valid for at least
         (preconfigured attribute) 'valid_days_min'
         """
-        date = datetime.datetime.utcnow() + datetime.timedelta(days=self.valid_days_min)
+        date = datetime.datetime.utcnow() + self.valid_days_min
         for cert in get_certs(self.db, identity, date):
             if key_match(cert, csr):
                 return cert
@@ -60,7 +62,7 @@ class CA:
     def issue_cert(self, csr, identity):
         serial_number = random_serial_number()
         not_before = datetime.datetime.utcnow()
-        not_after = not_before + datetime.timedelta(days=self.valid_days)
+        not_after = not_before + self.valid_days
         # raise a CAError when CA cert will not be valid till not_after
         self.check_cert_valid_at(not_after)
 
