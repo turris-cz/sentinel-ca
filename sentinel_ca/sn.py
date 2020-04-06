@@ -11,12 +11,12 @@ import zmq
 
 import sn
 
-from .exceptions import CAParseError, CARequestClientError, CARequestServerError
+from .exceptions import CARequestClientError, CARequestServerError
 
 logger = logging.getLogger("ca")
 
 
-CONFIG_DEFAULT_PATH = "ca.ini"
+CONFIG_PATH_DEFAULT = "ca.ini"
 VALID_DAYS_DEFAULT = "60"
 VALID_DAYS_MIN_DEFAULT = "15"
 
@@ -47,7 +47,7 @@ def get_argparser(parser):
     parser.add_argument(
             "-c", "--config",
             required=True,
-            default=CONFIG_DEFAULT_PATH,
+            default=CONFIG_PATH_DEFAULT,
             metavar="CONF",
             help="Path to configuration file"
     )

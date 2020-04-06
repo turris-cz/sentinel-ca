@@ -25,7 +25,7 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes
 
 
-CONFIG_DEFAULT_PATH = "cert-api.ini"
+CONFIG_PATH_DEFAULT = "cert-api.ini"
 
 SLEEP_MIN = 3
 SLEEP_MAX = 21
@@ -55,7 +55,7 @@ def get_arg_parser():
     parser.add_argument(
             "-c", "--config",
             required=True,
-            default=CONFIG_DEFAULT_PATH,
+            default=CONFIG_PATH_DEFAULT,
             metavar="CONF",
             help="Path to configuration file"
     )
