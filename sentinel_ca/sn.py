@@ -17,6 +17,8 @@ logger = logging.getLogger("ca")
 
 
 CONFIG_DEFAULT_PATH = "ca.ini"
+VALID_DAYS_DEFAULT = "60"
+VALID_DAYS_MIN_DEFAULT = "15"
 
 MESSAGE_TYPE = "sentinel/certificator/checker"
 AUTH_REQUEST_KEYS = (
@@ -74,6 +76,8 @@ def prepare_config():
     conf.set("ca", "cert", "")
     conf.set("ca", "key", "")
     conf.set("ca", "password", "")
+    conf.set("ca", "valid_days", VALID_DAYS_DEFAULT)
+    conf.set("ca", "valid_days_min", VALID_DAYS_MIN_DEFAULT)
 
     return conf
 

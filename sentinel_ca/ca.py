@@ -15,12 +15,6 @@ from .db import ca_exists_in_db, get_ca_id, get_certs, store_ca, store_cert
 logger = logging.getLogger("ca")
 
 
-# default certificate validity
-CERT_DAYS = 60
-# 25% before end of validity
-VALID_DAYS = int(0.25*CERT_DAYS)
-
-
 class CA:
     def __init__(self, conf, db, ignore_errors=False):
         cert_path = conf.get("ca", "cert")
@@ -41,28 +35,32 @@ class CA:
             if not ignore_errors:
                 raise
 
+        self.valid_days = conf.getint("ca", "valid_days")
+        self.valid_days_min = conf.getint("ca", "valid_days_min")
+
         self.db = db
         if not ca_exists_in_db(self.db, self.cert):
             store_ca(self.db, self.cert)
         self.id = get_ca_id(self.db, self.cert)
 
 
-    def get_valid_cert_matching_csr(self, identity, csr, days=VALID_DAYS):
+    def get_valid_cert_matching_csr(self, identity, csr):
         """
-        Returns certificate for the common name 'identity', that would be valid
-        at least for 'days' and match public key in the request 'csr'
+        Return certificate for the common name 'identity' matching public key
+        in the request 'csr' and that would be valid for at least
+        (preconfigured attribute) 'valid_days_min'
         """
-        date = datetime.datetime.utcnow() + datetime.timedelta(days=days)
+        date = datetime.datetime.utcnow() + datetime.timedelta(days=self.valid_days_min)
         for cert in get_certs(self.db, identity, date):
             if key_match(cert, csr):
                 return cert
         return None
 
 
-    def issue_cert(self, csr, identity, days=CERT_DAYS):
+    def issue_cert(self, csr, identity):
         serial_number = random_serial_number()
         not_before = datetime.datetime.utcnow()
-        not_after = not_before + datetime.timedelta(days=days)
+        not_after = not_before + datetime.timedelta(days=self.valid_days)
         # raise a CAError when CA cert will not be valid till not_after
         self.check_cert_valid_at(not_after)
 
