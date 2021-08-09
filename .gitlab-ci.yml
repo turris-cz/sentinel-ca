@@ -1,4 +1,4 @@
-image: registry.labs.nic.cz/turris/sentinel/sn
+image: registry.nic.cz/turris/sentinel/sn
 
 stages:
   - test
@@ -6,8 +6,8 @@ stages:
 
 before_script:
   - service rsyslog start
-  - pip3 install git+https://gitlab.labs.nic.cz/turris/sentinel/sn@master#egg=sn
-  - pip3 install git+https://gitlab.labs.nic.cz/turris/sentinel/sn@master#egg=sn[tests]
+  - pip3 install git+https://gitlab.nic.cz/turris/sentinel/sn@master#egg=sn
+  - pip3 install git+https://gitlab.nic.cz/turris/sentinel/sn@master#egg=sn[tests]
   - pip3 install cryptography
   - pip3 install redis
 
