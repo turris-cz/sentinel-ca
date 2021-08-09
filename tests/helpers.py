@@ -18,7 +18,7 @@ def dict_to_bytes(d):
 
 
 def bytes_to_dict(b):
-    return json.loads(str(b), encoding='utf-8')
+    return json.loads(str(b))
 
 
 def prepare_db_scheme(db_path, scheme_path="scheme.sql"):
