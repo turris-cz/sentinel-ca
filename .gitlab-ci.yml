@@ -1,4 +1,4 @@
-image: registry.nic.cz/turris/sentinel/sn
+image: registry.nic.cz/turris/sentinel/sn:debian11
 
 stages:
   - test
