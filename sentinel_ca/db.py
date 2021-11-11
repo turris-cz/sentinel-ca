@@ -23,7 +23,7 @@ def db_connection(conf):
                     """
             )
             c.execute("""
-                    SELECT id, issuer_name, not_before, not_after, authority_key_identifier, ca_cert
+                    SELECT id, ca_name, issuer_name, not_before, not_after, authority_key_identifier, ca_cert
                     FROM ca
                     LIMIT 1
                     """
@@ -45,18 +45,18 @@ def ca_exists_in_db(conn, ca_cert):
 
 
 def get_ca_id(conn, ca_cert):
-    issuer_name = get_issuer_common_name(ca_cert)
+    ca_name = get_cert_common_name(ca_cert)
     authority_key_identifier = aki_to_str(build_aki(ca_cert))
 
     with contextlib.closing(conn.cursor()) as c:
         c.execute("""
                 SELECT id
                 FROM ca
-                WHERE issuer_name = ?
+                WHERE ca_name = ?
                     AND authority_key_identifier = ?
                 LIMIT 1
                 """,
-                (issuer_name, authority_key_identifier)
+                (ca_name, authority_key_identifier)
         )
 
         row = c.fetchone()
@@ -87,6 +87,7 @@ def get_certs(conn, identity, date):
 
 def store_ca(conn, ca_cert):
     issuer_name = get_issuer_common_name(ca_cert)
+    ca_name = get_cert_common_name(ca_cert)
     not_before = ca_cert.not_valid_before
     not_after = ca_cert.not_valid_after
     authority_key_identifier = aki_to_str(build_aki(ca_cert))
@@ -94,10 +95,10 @@ def store_ca(conn, ca_cert):
 
     with contextlib.closing(conn.cursor()) as c:
         c.execute("""
-                INSERT INTO ca(issuer_name, not_before, not_after, authority_key_identifier, ca_cert)
-                VALUES (?,?,?,?,?)
+                INSERT INTO ca(issuer_name, ca_name, not_before, not_after, authority_key_identifier, ca_cert)
+                VALUES (?,?,?,?,?,?)
                 """,
-                (issuer_name, not_before, not_after, authority_key_identifier, cert_bytes)
+                (issuer_name, ca_name, not_before, not_after, authority_key_identifier, cert_bytes)
         )
     conn.commit()
 

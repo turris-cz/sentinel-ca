@@ -4,7 +4,8 @@
 
 CREATE TABLE IF NOT EXISTS ca (
     id INTEGER PRIMARY KEY,
-    issuer_name TEXT NOT NULL UNIQUE,
+    issuer_name TEXT NOT NULL,
+    ca_name TEXT NOT NULL UNIQUE,
     not_before INTEGER NOT NULL,
     not_after INTEGER NOT NULL,
     authority_key_identifier TEXT NOT NULL UNIQUE,
