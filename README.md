@@ -1,7 +1,7 @@
 # Sentinel:CA
 
-![pipeline status](https://gitlab.labs.nic.cz/turris/sentinel/ca/badges/master/pipeline.svg)
-![coverage report](https://gitlab.labs.nic.cz/turris/sentinel/ca/badges/master/coverage.svg)
+![pipeline status](https://gitlab.nic.cz/turris/sentinel/ca/badges/master/pipeline.svg)
+![coverage report](https://gitlab.nic.cz/turris/sentinel/ca/badges/master/coverage.svg)
 
 A *Certifiator* component
 
@@ -15,7 +15,7 @@ devices.
     - `cryptography`
     - `redis`
 - Custom libraries
-    - [Turris:Sentinel network](https://gitlab.labs.nic.cz/turris/sentinel/sn)
+    - [Turris:Sentinel network](https://gitlab.nic.cz/turris/sentinel/sn)
 
 
 ## Usage
@@ -43,7 +43,7 @@ devices.
     - Example config is in `ca.ini.example`
 5. Run `ca.py`
     - *sn* `checker` resource is needed (connection to *Sentinel:Certifiator*
-      component [Checker](https://gitlab.labs.nic.cz/turris/sentinel/checker))
+      component [Checker](https://gitlab.nic.cz/turris/sentinel/checker))
     - Path to a config file should be defined (defaults to `ca.ini`)
 
     ```
