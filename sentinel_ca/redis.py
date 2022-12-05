@@ -40,6 +40,7 @@ def init_redis(conf):
     return redis.StrictRedis(
             host=conf.get("redis", "host"),
             port=conf.getint("redis", "port"),
+            username=conf.get("redis", "username"),
             password=conf.get("redis", "password"),
             unix_socket_path=redis_socket
     )

@@ -3,6 +3,7 @@
 
 [redis]
 host = localhost
+username = ca
 password = l33thax0r
 
 [db]
